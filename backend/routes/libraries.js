@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const { bulkInsertLibraries } = require("../controllers/libraryController");
-const Library = require("../models/Library"); // Make sure this is at the top
+const Library = require("../models/Library");
+const libraryController = require("../controllers/libraryController");
 
 
 const {
@@ -14,8 +15,15 @@ const {
 
 const { verifyToken, verifyAdmin } = require("../config");
 
-router.get("/", getLibraries);
-router.get("/:id", getLibraryById);
+router.get("/", async (req, res) => {
+  try {
+    const libraries = await Library.find();
+    res.json(libraries);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+router.get("/:id", libraryController.getLibraryById);
 router.post("/", verifyToken, verifyAdmin, createLibrary);
 router.put("/:id", verifyToken, verifyAdmin, updateLibrary);
 router.delete("/:id", verifyToken, verifyAdmin, deleteLibrary);

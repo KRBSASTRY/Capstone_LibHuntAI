@@ -1,24 +1,46 @@
 const mongoose = require("mongoose");
 
-const librarySchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    description: { type: String, required: true },
-    category: { type: String, required: true },
-    supportedOS: { type: [String], default: [] },
-    license: { type: String, required: true },
-    cost: { type: String, default: "Free" },
-    version: { type: String, required: true },
-    dependencies: { type: [String], default: [] },
-    popularity: {
-      stars: { type: Number, default: 0 },
-      downloads: { type: Number, default: 0 },
-    },
-    usageExample: { type: String, default: "" },
-    featured: { type: Boolean, default: false },
-    lastUpdate: { type: String, default: "Unknown" },
+const librarySchema = new mongoose.Schema({
+  id: String,
+  name: String,
+  description: String,
+  longDescription: String,
+  logo: String,
+  category: String,
+  website: String,
+  github: String,
+  npm: String,
+  stars: Number,
+  version: String,
+  license: String,
+  lastUpdate: String,
+  firstRelease: String,
+  weeklyDownloads: Number,
+  contributors: Number,
+  usedBy: [String],
+  dependencies: [String],
+  os: [String],
+  bundle: {
+    size: String,
+    gzipped: String,
   },
-  { timestamps: true }
-);
+  performance: {
+    loadTime: Number,
+    renderTime: Number,
+    memoryUsage: Number,
+  },
+  issues: {
+    open: Number,
+    closed: Number,
+  },
+  securityIssues: Number,
+  testCoverage: Number,
+  alternatives: [String],
+  code: String,
+  codeMaintainability: Number,
+  typeSupport: String,
+  documentation: Number,
+  communitySupport: Number,
+});
 
 module.exports = mongoose.model("Library", librarySchema);

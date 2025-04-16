@@ -9,9 +9,19 @@ const authHeaders = () => ({
   },
 });
 
-export const fetchLibraries = async () => {
-  const res = await axios.get(API);
-  return res.data;
+export const fetchLibraryById = async (id) => {
+  const response = await axios.get(`${API}/${id}`);
+  return response.data;
+};
+
+export const fetchAllLibraries = async () => {
+  try {
+    const res = await axios.get(API); 
+    return res.data;
+  } catch (err) {
+    console.error("Error fetching libraries:", err);
+    return [];
+  }
 };
 
 export const createLibrary = async (data) => {
@@ -29,10 +39,6 @@ export const deleteLibrary = async (id) => {
   return res.data;
 };
 
-export const getLibraryById = async (id) => {
-  const res = await axios.get(`${API}/${id}`);
-  return res.data;
-};
 
 export const bulkInsertLibraries = async (libs) => {
     const token = getToken(); // from authservice

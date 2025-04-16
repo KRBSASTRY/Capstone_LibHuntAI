@@ -8,6 +8,7 @@ import {
   SlidersHorizontal, CalendarClock, Download, Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { fetchAllLibraries } from "@/services/libraryService";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,309 +30,309 @@ import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 
-// Mock data
-const mockLibraries = [
-  { 
-    id: "1", 
-    name: "React", 
-    description: "A JavaScript library for building user interfaces",
-    category: "Frontend Framework",
-    stars: 198000,
-    version: "18.2.0",
-    license: "MIT",
-    lastUpdate: "2 months ago",
-    weeklyDownloads: 15700000,
-    dependencies: 2,
-    typescript: true,
-    score: {
-      performance: 85,
-      quality: 92,
-      maintenance: 95
-    },
-    tags: ["ui", "frontend", "component-based", "virtual-dom"],
-    bundleSize: "42.2 kB"
-  },
-  { 
-    id: "2", 
-    name: "Vue.js", 
-    description: "Progressive JavaScript framework for building UIs",
-    category: "Frontend Framework",
-    stars: 197000,
-    version: "3.2.45",
-    license: "MIT",
-    lastUpdate: "1 month ago",
-    weeklyDownloads: 4900000,
-    dependencies: 0,
-    typescript: true,
-    score: {
-      performance: 90,
-      quality: 95,
-      maintenance: 88
-    },
-    tags: ["ui", "frontend", "progressive", "component-based"],
-    bundleSize: "33.1 kB"
-  },
-  { 
-    id: "3", 
-    name: "Angular", 
-    description: "Platform for building mobile and desktop web applications",
-    category: "Frontend Framework",
-    stars: 85000,
-    version: "15.0.4",
-    license: "MIT",
-    lastUpdate: "2 weeks ago",
-    weeklyDownloads: 2300000,
-    dependencies: 3,
-    typescript: true,
-    score: {
-      performance: 75,
-      quality: 88,
-      maintenance: 90
-    },
-    tags: ["ui", "frontend", "platform", "google"],
-    bundleSize: "148 kB"
-  },
-  { 
-    id: "4", 
-    name: "Express", 
-    description: "Fast, unopinionated, minimalist web framework for Node.js",
-    category: "Backend Framework",
-    stars: 58000,
-    version: "4.18.2",
-    license: "MIT",
-    lastUpdate: "3 months ago",
-    weeklyDownloads: 18500000,
-    dependencies: 30,
-    typescript: false,
-    score: {
-      performance: 94,
-      quality: 87,
-      maintenance: 80
-    },
-    tags: ["server", "node", "api", "backend"],
-    bundleSize: "208 kB"
-  },
-  { 
-    id: "5", 
-    name: "Django", 
-    description: "High-level Python Web framework that encourages rapid development",
-    category: "Backend Framework",
-    stars: 66000,
-    version: "4.1.4",
-    license: "BSD-3-Clause",
-    lastUpdate: "2 months ago",
-    weeklyDownloads: 1200000,
-    dependencies: 0,
-    typescript: false,
-    score: {
-      performance: 88,
-      quality: 92,
-      maintenance: 85
-    },
-    tags: ["python", "backend", "orm", "fullstack"],
-    bundleSize: null
-  },
-  { 
-    id: "6", 
-    name: "Tailwind CSS", 
-    description: "A utility-first CSS framework for rapid UI development",
-    category: "CSS Framework",
-    stars: 62000,
-    version: "3.2.4",
-    license: "MIT",
-    lastUpdate: "1 month ago",
-    weeklyDownloads: 3900000,
-    dependencies: 5,
-    typescript: false,
-    score: {
-      performance: 92,
-      quality: 95,
-      maintenance: 98
-    },
-    tags: ["css", "design", "utility", "responsive"],
-    bundleSize: "3.9 kB"
-  },
-  { 
-    id: "7", 
-    name: "Redux", 
-    description: "Predictable state container for JavaScript apps",
-    category: "State Management",
-    stars: 57000,
-    version: "4.2.0",
-    license: "MIT",
-    lastUpdate: "5 months ago",
-    weeklyDownloads: 7100000,
-    dependencies: 1,
-    typescript: true,
-    score: {
-      performance: 90,
-      quality: 88,
-      maintenance: 82
-    },
-    tags: ["state", "flux", "react", "frontend"],
-    bundleSize: "2.6 kB"
-  },
-  { 
-    id: "8", 
-    name: "Mongoose", 
-    description: "MongoDB object modeling designed to work in an asynchronous environment",
-    category: "Database",
-    stars: 25000,
-    version: "6.8.3",
-    license: "MIT",
-    lastUpdate: "2 weeks ago",
-    weeklyDownloads: 3500000,
-    dependencies: 10,
-    typescript: true,
-    score: {
-      performance: 85,
-      quality: 90,
-      maintenance: 95
-    },
-    tags: ["mongodb", "database", "orm", "node"],
-    bundleSize: "47.8 kB"
-  },
-  { 
-    id: "9", 
-    name: "Jest", 
-    description: "Delightful JavaScript Testing Framework with a focus on simplicity",
-    category: "Testing",
-    stars: 41000,
-    version: "29.3.1",
-    license: "MIT",
-    lastUpdate: "1 month ago",
-    weeklyDownloads: 12800000,
-    dependencies: 15,
-    typescript: true,
-    score: {
-      performance: 88,
-      quality: 94,
-      maintenance: 92
-    },
-    tags: ["testing", "unit-testing", "javascript", "framework"],
-    bundleSize: "104.5 kB"
-  },
-  { 
-    id: "10", 
-    name: "Next.js", 
-    description: "The React Framework for Production",
-    category: "Framework",
-    stars: 97000,
-    version: "13.1.1",
-    license: "MIT",
-    lastUpdate: "1 week ago",
-    weeklyDownloads: 4200000,
-    dependencies: 7,
-    typescript: true,
-    score: {
-      performance: 95,
-      quality: 98,
-      maintenance: 96
-    },
-    tags: ["react", "ssr", "static", "framework"],
-    bundleSize: "76.3 kB"
-  },
-  { 
-    id: "11", 
-    name: "Chakra UI", 
-    description: "Simple, modular and accessible component library for React",
-    category: "UI Components",
-    stars: 32000,
-    version: "2.4.9",
-    license: "MIT",
-    lastUpdate: "2 weeks ago",
-    weeklyDownloads: 1100000,
-    dependencies: 12,
-    typescript: true,
-    score: {
-      performance: 92,
-      quality: 95,
-      maintenance: 90
-    },
-    tags: ["ui", "components", "design-system", "react"],
-    bundleSize: "128.5 kB"
-  },
-  { 
-    id: "12", 
-    name: "Framer Motion", 
-    description: "A production-ready motion library for React",
-    category: "Animation",
-    stars: 18500,
-    version: "8.5.2",
-    license: "MIT",
-    lastUpdate: "3 days ago",
-    weeklyDownloads: 1500000,
-    dependencies: 3,
-    typescript: true,
-    score: {
-      performance: 90,
-      quality: 95,
-      maintenance: 94
-    },
-    tags: ["animation", "react", "motion", "transitions"],
-    bundleSize: "32.7 kB"
-  },
-  { 
-    id: "13", 
-    name: "TanStack Query", 
-    description: "Powerful asynchronous state management for TS/JS, React, Solid, Vue and Svelte",
-    category: "Data Fetching",
-    stars: 33000,
-    version: "4.22.0",
-    license: "MIT",
-    lastUpdate: "5 days ago",
-    weeklyDownloads: 2700000,
-    dependencies: 2,
-    typescript: true,
-    score: {
-      performance: 95,
-      quality: 97,
-      maintenance: 96
-    },
-    tags: ["data-fetching", "cache", "async", "state"],
-    bundleSize: "12.6 kB"
-  },
-  { 
-    id: "14", 
-    name: "Zustand", 
-    description: "A small, fast and scalable state-management solution",
-    category: "State Management",
-    stars: 24500,
-    version: "4.3.2",
-    license: "MIT",
-    lastUpdate: "1 week ago",
-    weeklyDownloads: 1900000,
-    dependencies: 1,
-    typescript: true,
-    score: {
-      performance: 98,
-      quality: 95,
-      maintenance: 94
-    },
-    tags: ["state", "react", "hooks", "redux-alternative"],
-    bundleSize: "1.1 kB"
-  },
-  { 
-    id: "15", 
-    name: "TypeORM", 
-    description: "ORM for TypeScript and JavaScript",
-    category: "Database",
-    stars: 30000,
-    version: "0.3.11",
-    license: "MIT",
-    lastUpdate: "2 weeks ago",
-    weeklyDownloads: 850000,
-    dependencies: 8,
-    typescript: true,
-    score: {
-      performance: 87,
-      quality: 92,
-      maintenance: 85
-    },
-    tags: ["orm", "typescript", "database", "sql"],
-    bundleSize: "320.5 kB"
-  },
-];
+// // Mock data
+// const mockLibraries = [
+//   { 
+//     id: "1", 
+//     name: "React", 
+//     description: "A JavaScript library for building user interfaces",
+//     category: "Frontend Framework",
+//     stars: 198000,
+//     version: "18.2.0",
+//     license: "MIT",
+//     lastUpdate: "2 months ago",
+//     weeklyDownloads: 15700000,
+//     dependencies: 2,
+//     typescript: true,
+//     performance: {
+//       performance: 85,
+//       loadTime: 92,
+//       maintenance: 95
+//     },
+//     tags: ["ui", "frontend", "component-based", "virtual-dom"],
+//     bundleSize: "42.2 kB"
+//   },
+//   { 
+//     id: "2", 
+//     name: "Vue.js", 
+//     description: "Progressive JavaScript framework for building UIs",
+//     category: "Frontend Framework",
+//     stars: 197000,
+//     version: "3.2.45",
+//     license: "MIT",
+//     lastUpdate: "1 month ago",
+//     weeklyDownloads: 4900000,
+//     dependencies: 0,
+//     typescript: true,
+//     performance: {
+//       performance: 90,
+//       loadTime: 95,
+//       maintenance: 88
+//     },
+//     tags: ["ui", "frontend", "progressive", "component-based"],
+//     bundleSize: "33.1 kB"
+//   },
+//   { 
+//     id: "3", 
+//     name: "Angular", 
+//     description: "Platform for building mobile and desktop web applications",
+//     category: "Frontend Framework",
+//     stars: 85000,
+//     version: "15.0.4",
+//     license: "MIT",
+//     lastUpdate: "2 weeks ago",
+//     weeklyDownloads: 2300000,
+//     dependencies: 3,
+//     typescript: true,
+//     performance: {
+//       performance: 75,
+//       loadTime: 88,
+//       maintenance: 90
+//     },
+//     tags: ["ui", "frontend", "platform", "google"],
+//     bundleSize: "148 kB"
+//   },
+//   { 
+//     id: "4", 
+//     name: "Express", 
+//     description: "Fast, unopinionated, minimalist web framework for Node.js",
+//     category: "Backend Framework",
+//     stars: 58000,
+//     version: "4.18.2",
+//     license: "MIT",
+//     lastUpdate: "3 months ago",
+//     weeklyDownloads: 18500000,
+//     dependencies: 30,
+//     typescript: false,
+//     performance: {
+//       performance: 94,
+//       loadTime: 87,
+//       maintenance: 80
+//     },
+//     tags: ["server", "node", "api", "backend"],
+//     bundleSize: "208 kB"
+//   },
+//   { 
+//     id: "5", 
+//     name: "Django", 
+//     description: "High-level Python Web framework that encourages rapid development",
+//     category: "Backend Framework",
+//     stars: 66000,
+//     version: "4.1.4",
+//     license: "BSD-3-Clause",
+//     lastUpdate: "2 months ago",
+//     weeklyDownloads: 1200000,
+//     dependencies: 0,
+//     typescript: false,
+//     performance: {
+//       performance: 88,
+//       loadTime: 92,
+//       maintenance: 85
+//     },
+//     tags: ["python", "backend", "orm", "fullstack"],
+//     bundleSize: null
+//   },
+//   { 
+//     id: "6", 
+//     name: "Tailwind CSS", 
+//     description: "A utility-first CSS framework for rapid UI development",
+//     category: "CSS Framework",
+//     stars: 62000,
+//     version: "3.2.4",
+//     license: "MIT",
+//     lastUpdate: "1 month ago",
+//     weeklyDownloads: 3900000,
+//     dependencies: 5,
+//     typescript: false,
+//     performance: {
+//       performance: 92,
+//       loadTime: 95,
+//       maintenance: 98
+//     },
+//     tags: ["css", "design", "utility", "responsive"],
+//     bundleSize: "3.9 kB"
+//   },
+//   { 
+//     id: "7", 
+//     name: "Redux", 
+//     description: "Predictable state container for JavaScript apps",
+//     category: "State Management",
+//     stars: 57000,
+//     version: "4.2.0",
+//     license: "MIT",
+//     lastUpdate: "5 months ago",
+//     weeklyDownloads: 7100000,
+//     dependencies: 1,
+//     typescript: true,
+//     performance: {
+//       performance: 90,
+//       loadTime: 88,
+//       maintenance: 82
+//     },
+//     tags: ["state", "flux", "react", "frontend"],
+//     bundleSize: "2.6 kB"
+//   },
+//   { 
+//     id: "8", 
+//     name: "Mongoose", 
+//     description: "MongoDB object modeling designed to work in an asynchronous environment",
+//     category: "Database",
+//     stars: 25000,
+//     version: "6.8.3",
+//     license: "MIT",
+//     lastUpdate: "2 weeks ago",
+//     weeklyDownloads: 3500000,
+//     dependencies: 10,
+//     typescript: true,
+//     performance: {
+//       performance: 85,
+//       loadTime: 90,
+//       maintenance: 95
+//     },
+//     tags: ["mongodb", "database", "orm", "node"],
+//     bundleSize: "47.8 kB"
+//   },
+//   { 
+//     id: "9", 
+//     name: "Jest", 
+//     description: "Delightful JavaScript Testing Framework with a focus on simplicity",
+//     category: "Testing",
+//     stars: 41000,
+//     version: "29.3.1",
+//     license: "MIT",
+//     lastUpdate: "1 month ago",
+//     weeklyDownloads: 12800000,
+//     dependencies: 15,
+//     typescript: true,
+//     performance: {
+//       performance: 88,
+//       loadTime: 94,
+//       maintenance: 92
+//     },
+//     tags: ["testing", "unit-testing", "javascript", "framework"],
+//     bundleSize: "104.5 kB"
+//   },
+//   { 
+//     id: "10", 
+//     name: "Next.js", 
+//     description: "The React Framework for Production",
+//     category: "Framework",
+//     stars: 97000,
+//     version: "13.1.1",
+//     license: "MIT",
+//     lastUpdate: "1 week ago",
+//     weeklyDownloads: 4200000,
+//     dependencies: 7,
+//     typescript: true,
+//     performance: {
+//       performance: 95,
+//       loadTime: 98,
+//       maintenance: 96
+//     },
+//     tags: ["react", "ssr", "static", "framework"],
+//     bundleSize: "76.3 kB"
+//   },
+//   { 
+//     id: "11", 
+//     name: "Chakra UI", 
+//     description: "Simple, modular and accessible component library for React",
+//     category: "UI Components",
+//     stars: 32000,
+//     version: "2.4.9",
+//     license: "MIT",
+//     lastUpdate: "2 weeks ago",
+//     weeklyDownloads: 1100000,
+//     dependencies: 12,
+//     typescript: true,
+//     performance: {
+//       performance: 92,
+//       loadTime: 95,
+//       maintenance: 90
+//     },
+//     tags: ["ui", "components", "design-system", "react"],
+//     bundleSize: "128.5 kB"
+//   },
+//   { 
+//     id: "12", 
+//     name: "Framer Motion", 
+//     description: "A production-ready motion library for React",
+//     category: "Animation",
+//     stars: 18500,
+//     version: "8.5.2",
+//     license: "MIT",
+//     lastUpdate: "3 days ago",
+//     weeklyDownloads: 1500000,
+//     dependencies: 3,
+//     typescript: true,
+//     performance: {
+//       performance: 90,
+//       loadTime: 95,
+//       maintenance: 94
+//     },
+//     tags: ["animation", "react", "motion", "transitions"],
+//     bundleSize: "32.7 kB"
+//   },
+//   { 
+//     id: "13", 
+//     name: "TanStack Query", 
+//     description: "Powerful asynchronous state management for TS/JS, React, Solid, Vue and Svelte",
+//     category: "Data Fetching",
+//     stars: 33000,
+//     version: "4.22.0",
+//     license: "MIT",
+//     lastUpdate: "5 days ago",
+//     weeklyDownloads: 2700000,
+//     dependencies: 2,
+//     typescript: true,
+//     performance: {
+//       performance: 95,
+//       loadTime: 97,
+//       maintenance: 96
+//     },
+//     tags: ["data-fetching", "cache", "async", "state"],
+//     bundleSize: "12.6 kB"
+//   },
+//   { 
+//     id: "14", 
+//     name: "Zustand", 
+//     description: "A small, fast and scalable state-management solution",
+//     category: "State Management",
+//     stars: 24500,
+//     version: "4.3.2",
+//     license: "MIT",
+//     lastUpdate: "1 week ago",
+//     weeklyDownloads: 1900000,
+//     dependencies: 1,
+//     typescript: true,
+//     performance: {
+//       performance: 98,
+//       loadTime: 95,
+//       maintenance: 94
+//     },
+//     tags: ["state", "react", "hooks", "redux-alternative"],
+//     bundleSize: "1.1 kB"
+//   },
+//   { 
+//     id: "15", 
+//     name: "TypeORM", 
+//     description: "ORM for TypeScript and JavaScript",
+//     category: "Database",
+//     stars: 30000,
+//     version: "0.3.11",
+//     license: "MIT",
+//     lastUpdate: "2 weeks ago",
+//     weeklyDownloads: 850000,
+//     dependencies: 8,
+//     typescript: true,
+//     performance: {
+//       performance: 87,
+//       loadTime: 92,
+//       maintenance: 85
+//     },
+//     tags: ["orm", "typescript", "database", "sql"],
+//     bundleSize: "320.5 kB"
+//   },
+// ];
 
 const categories = [
   "Frontend Framework", 
@@ -346,9 +347,51 @@ const categories = [
   "Data Fetching"
 ];
 
-type Library = typeof mockLibraries[0];
+type Library = {
+  id: string,
+  name: string,
+  description: string,
+  longDescription: string,
+  logo: string,
+  category: string,
+  website: string,
+  github: string,
+  npm: string,
+  stars: number,
+  version: string,
+  license: string,
+  lastUpdate: string,
+  firstRelease: string,
+  weeklyDownloads: number,
+  contributors: number,
+  usedBy: [string],
+  dependencies: [string],
+  os: [string],
+  bundle: {
+    size: string,
+    gzipped: string,
+  },
+  performance: {
+    loadTime: number,
+    renderTime: number,
+    memoryUsage: number,
+  },
+  issues: {
+    open: number,
+    closed: number,
+  },
+  securityIssues: number,
+  testCoverage: number,
+  alternatives: [string],
+  code: string,
+  codeMaintainability: number,
+  typeSupport: string,
+  documentation: number,
+  communitySupport: number,
+}
 
 const SearchResults = () => {
+  const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
   const initialCategory = searchParams.get("category") || "";
@@ -370,15 +413,32 @@ const SearchResults = () => {
   const [sortBy, setSortBy] = useState<string>("relevance");
   const [filtersOpen, setFiltersOpen] = useState(false);
   
-  const { toast } = useToast();
+
   
-  // Initialize libraries
+
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setLibraries(mockLibraries);
-      setLoadingResults(false);
-    }, 800);
+    const timer = setTimeout(() => {
+      const fetchData = async () => {
+        try {
+          const data = await fetchAllLibraries();
+          console.log("Fetched libraries:", data);
+          setLibraries(data);
+        } catch (error) {
+          console.error("Failed to fetch libraries:", error);
+          toast({
+            title: "Error",
+            description: "Could not fetch libraries from server.",
+            variant: "destructive",
+          });
+        } finally {
+          setLoadingResults(false);
+        }
+      };
+  
+      fetchData();
+    }, 800); 
+  
+    return () => clearTimeout(timer); 
   }, []);
   
   // Filter libraries based on search query and filters
@@ -393,7 +453,7 @@ const SearchResults = () => {
       filtered = filtered.filter(lib => 
         lib.name.toLowerCase().includes(query) || 
         lib.description.toLowerCase().includes(query) ||
-        lib.tags.some(tag => tag.toLowerCase().includes(query))
+        lib.tags?.some(tag => tag.toLowerCase().includes(query))
       );
     }
     
@@ -441,25 +501,26 @@ const SearchResults = () => {
         if (!a.lastUpdate.includes("day") && b.lastUpdate.includes("day")) return 1;
         if (a.lastUpdate.includes("week") && !b.lastUpdate.includes("week") && !b.lastUpdate.includes("day")) return -1;
         if (!a.lastUpdate.includes("week") && !a.lastUpdate.includes("day") && b.lastUpdate.includes("week")) return 1;
-        return b.stars - a.stars;
+        return b.stars - a.stars; // fallback sort
       });
     } else if (sortBy === "performance") {
-      filtered.sort((a, b) => b.score.performance - a.score.performance);
+      filtered.sort((a, b) => getAverageperformance(b) - getAverageperformance(a));
     } else if (sortBy === "overall") {
       filtered.sort((a, b) => {
-        const scoreA = (a.score.performance + a.score.quality + a.score.maintenance) / 3;
-        const scoreB = (b.score.performance + b.score.quality + b.score.maintenance) / 3;
+        const scoreA = (a.documentation + a.codeMaintainability + a.communitySupport) / 3;
+        const scoreB = (b.documentation + b.codeMaintainability + b.communitySupport) / 3;
         return scoreB - scoreA;
       });
     } else if (sortBy === "size") {
       filtered.sort((a, b) => {
-        if (!a.bundleSize) return 1;
-        if (!b.bundleSize) return -1;
-        const sizeA = parseFloat(a.bundleSize.replace(" kB", ""));
-        const sizeB = parseFloat(b.bundleSize.replace(" kB", ""));
+        if (!a.bundle?.size) return 1;
+        if (!b.bundle?.size) return -1;
+        const sizeA = parseFloat(a.bundle.size.replace(" kB", ""));
+        const sizeB = parseFloat(b.bundle.size.replace(" kB", ""));
         return sizeA - sizeB;
       });
     }
+    
     
     setFilteredLibraries(filtered);
   }, [libraries, searchQuery, selectedCategories, minStars, hasTypescript, updatedWithin, sortBy]);
@@ -505,10 +566,29 @@ const SearchResults = () => {
     });
   };
   
-  // Calculate average score
-  const getAverageScore = (lib: Library) => {
-    return Math.round((lib.score.performance + lib.score.quality + lib.score.maintenance) / 3);
+  // Calculate average performance
+  const getAverageperformance = (lib: Library): number => {
+    if (
+      !lib.performance ||
+      lib.performance.loadTime === undefined ||
+      lib.performance.renderTime === undefined ||
+      lib.performance.memoryUsage === undefined
+    ) {
+      return 0;
+    }
+  
+    return Math.round(
+      (lib.performance.loadTime + lib.performance.renderTime + lib.performance.memoryUsage) / 3
+    );
   };
+
+
+  const getAverageScore = (lib: Library) => {
+    return Math.round(
+      (lib.documentation + lib.codeMaintainability + lib.communitySupport) / 3
+    );
+  };
+  
   
   // Format large numbers
   const formatNumber = (num: number) => {
@@ -854,7 +934,7 @@ const SearchResults = () => {
                       checked={sortBy === "overall"}
                       onCheckedChange={() => setSortBy("overall")}
                     >
-                      Overall Score
+                      Overall performance
                     </DropdownMenuCheckboxItem>
                     
                     <DropdownMenuCheckboxItem
@@ -1113,7 +1193,7 @@ const SearchResults = () => {
                         checked={sortBy === "overall"}
                         onCheckedChange={() => setSortBy("overall")}
                       >
-                        Overall Score
+                        Overall performance
                       </DropdownMenuCheckboxItem>
                       
                       <DropdownMenuCheckboxItem
@@ -1245,7 +1325,7 @@ const SearchResults = () => {
                           </div>
                           
                           <div className="text-xs px-2 py-1 bg-white/10 rounded-full">
-                            Score: {getAverageScore(library)}
+                            performance: {getAverageperformance(library)}
                           </div>
                         </div>
                       </CardContent>
@@ -1329,7 +1409,7 @@ const SearchResults = () => {
                               
                               <div className="flex items-center gap-2 md:justify-end">
                                 <div className="items-center text-xs px-2 py-1 bg-white/10 rounded-full">
-                                  Score: {getAverageScore(library)}
+                                  performance: {getAverageperformance(library)}
                                 </div>
                                 
                                 <Button 

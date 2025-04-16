@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { fetchLibraryById } from "@/services/libraryService";
 
 // Mock library data
 const libraryData = {
@@ -132,13 +133,17 @@ const LibraryDetail = () => {
   const { toast } = useToast();
   
   useEffect(() => {
-    // Simulate API fetch
-    setTimeout(() => {
-      if (id && libraryData[id as keyof typeof libraryData]) {
-        setLibrary(libraryData[id as keyof typeof libraryData]);
+    const loadLibrary = async () => {
+      try {
+        const data = await fetchLibraryById(id!);
+        setLibrary(data);
+      } catch (error) {
+        console.error("Error loading library:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }, 800);
+    };
+    if (id) loadLibrary();
   }, [id]);
   
   if (loading) {

@@ -1,21 +1,21 @@
 const Library = require("../models/Library");
 
-exports.getLibraries = async (req, res) => {
+exports.getLibraryById = async (req, res) => {
   try {
-    const libraries = await Library.find();
-    res.status(200).json(libraries);
+    const library = await Library.findOne({ id: req.params.id });
+    if (!library) return res.status(404).json({ error: "Library not found" });
+    res.json(library);
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch libraries", error: err.message });
+    res.status(500).json({ error: "Server error" });
   }
 };
 
-exports.getLibraryById = async (req, res) => {
+exports.getAllLibraries = async (req, res) => {
   try {
-    const library = await Library.findById(req.params.id);
-    if (!library) return res.status(404).json({ message: "Library not found" });
-    res.status(200).json(library);
+    const libraries = await Library.find();
+    res.json(libraries);
   } catch (err) {
-    res.status(500).json({ message: "Error fetching library", error: err.message });
+    res.status(500).json({ error: "Server error" });
   }
 };
 

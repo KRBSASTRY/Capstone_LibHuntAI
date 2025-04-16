@@ -21,258 +21,261 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { fetchAllLibraries } from "@/services/libraryService";
 
-// Mock data
-const librariesData = {
-  "1": {
-    id: "1",
-    name: "React.js",
-    description: "A JavaScript library for building user interfaces",
-    category: "Frontend Framework",
-    website: "https://reactjs.org",
-    github: "https://github.com/facebook/react",
-    npm: "https://www.npmjs.com/package/react",
-    stars: 198000,
-    version: "18.2.0",
-    license: "MIT",
-    lastUpdate: "2 months ago",
-    firstRelease: "May 29, 2013",
-    weeklyDownloads: 15700000,
-    contributors: 1602,
-    dependencies: ["loose-envify", "object-assign", "scheduler"],
-    bundle: {
-      size: "42.2 kB",
-      gzipped: "13.8 kB"
-    },
-    performance: {
-      loadTime: 82,
-      renderTime: 76,
-      memoryUsage: 68
-    },
-    securityIssues: 0,
-    codeMaintainability: 94,
-    typeSupport: "Excellent",
-    documentation: 96,
-    communitySupport: 98,
-  },
-  "2": {
-    id: "2",
-    name: "Vue.js",
-    description: "Progressive JavaScript framework for building UIs",
-    category: "Frontend Framework",
-    website: "https://vuejs.org",
-    github: "https://github.com/vuejs/vue",
-    npm: "https://www.npmjs.com/package/vue",
-    stars: 197000,
-    version: "3.2.45",
-    license: "MIT",
-    lastUpdate: "1 month ago",
-    firstRelease: "February 2014",
-    weeklyDownloads: 4900000,
-    contributors: 368,
-    dependencies: [],
-    bundle: {
-      size: "33.1 kB",
-      gzipped: "11.9 kB"
-    },
-    performance: {
-      loadTime: 90,
-      renderTime: 88,
-      memoryUsage: 72
-    },
-    securityIssues: 0,
-    codeMaintainability: 92,
-    typeSupport: "Good",
-    documentation: 98,
-    communitySupport: 90,
-  },
-  "3": {
-    id: "3",
-    name: "Angular",
-    description: "Platform for building mobile and desktop web applications",
-    category: "Frontend Framework",
-    website: "https://angular.io",
-    github: "https://github.com/angular/angular",
-    npm: "https://www.npmjs.com/package/@angular/core",
-    stars: 85000,
-    version: "15.0.4",
-    license: "MIT",
-    lastUpdate: "2 weeks ago",
-    firstRelease: "September 2016",
-    weeklyDownloads: 2300000,
-    contributors: 1482,
-    dependencies: ["rxjs", "tslib", "zone.js"],
-    bundle: {
-      size: "148 kB",
-      gzipped: "38.4 kB"
-    },
-    performance: {
-      loadTime: 65,
-      renderTime: 70,
-      memoryUsage: 85
-    },
-    securityIssues: 0,
-    codeMaintainability: 85,
-    typeSupport: "Excellent",
-    documentation: 95,
-    communitySupport: 85,
-  },
-  "4": {
-    id: "4",
-    name: "Svelte",
-    description: "Cybernetically enhanced web apps",
-    category: "Frontend Framework",
-    website: "https://svelte.dev",
-    github: "https://github.com/sveltejs/svelte",
-    npm: "https://www.npmjs.com/package/svelte",
-    stars: 62000,
-    version: "3.55.0",
-    license: "MIT",
-    lastUpdate: "3 weeks ago",
-    firstRelease: "November 2016",
-    weeklyDownloads: 950000,
-    contributors: 562,
-    dependencies: [],
-    bundle: {
-      size: "0 kB (compiled away)",
-      gzipped: "0 kB (compiled away)"
-    },
-    performance: {
-      loadTime: 98,
-      renderTime: 96,
-      memoryUsage: 95
-    },
-    securityIssues: 0,
-    codeMaintainability: 88,
-    typeSupport: "Good",
-    documentation: 85,
-    communitySupport: 75,
-  },
-  "5": {
-    id: "5",
-    name: "Redux",
-    description: "Predictable state container for JavaScript apps",
-    category: "State Management",
-    website: "https://redux.js.org",
-    github: "https://github.com/reduxjs/redux",
-    npm: "https://www.npmjs.com/package/redux",
-    stars: 57000,
-    version: "4.2.0",
-    license: "MIT",
-    lastUpdate: "5 months ago",
-    firstRelease: "June 2015",
-    weeklyDownloads: 7100000,
-    contributors: 894,
-    dependencies: [],
-    bundle: {
-      size: "2.6 kB",
-      gzipped: "1.1 kB"
-    },
-    performance: {
-      loadTime: 95,
-      renderTime: 85,
-      memoryUsage: 90
-    },
-    securityIssues: 0,
-    codeMaintainability: 90,
-    typeSupport: "Excellent",
-    documentation: 92,
-    communitySupport: 90,
-  },
-  "6": {
-    id: "6",
-    name: "Zustand",
-    description: "Small, fast and scalable state-management solution",
-    category: "State Management",
-    website: "https://github.com/pmndrs/zustand",
-    github: "https://github.com/pmndrs/zustand",
-    npm: "https://www.npmjs.com/package/zustand",
-    stars: 23000,
-    version: "4.1.5",
-    license: "MIT",
-    lastUpdate: "1 week ago",
-    firstRelease: "October 2019",
-    weeklyDownloads: 1500000,
-    contributors: 184,
-    dependencies: ["use-sync-external-store"],
-    bundle: {
-      size: "1.1 kB",
-      gzipped: "0.5 kB"
-    },
-    performance: {
-      loadTime: 97,
-      renderTime: 95,
-      memoryUsage: 97
-    },
-    securityIssues: 0,
-    codeMaintainability: 95,
-    typeSupport: "Excellent",
-    documentation: 85,
-    communitySupport: 80,
-  },
-  "7": {
-    id: "7",
-    name: "TanStack Query",
-    description: "Powerful asynchronous state management for TS/JS",
-    category: "Data Fetching",
-    website: "https://tanstack.com/query",
-    github: "https://github.com/tanstack/query",
-    npm: "https://www.npmjs.com/package/@tanstack/react-query",
-    stars: 31000,
-    version: "4.20.4",
-    license: "MIT",
-    lastUpdate: "5 days ago",
-    firstRelease: "March 2019",
-    weeklyDownloads: 2300000,
-    contributors: 534,
-    dependencies: ["@tanstack/query-core"],
-    bundle: {
-      size: "12.6 kB",
-      gzipped: "4.2 kB"
-    },
-    performance: {
-      loadTime: 92,
-      renderTime: 88,
-      memoryUsage: 82
-    },
-    securityIssues: 0,
-    codeMaintainability: 94,
-    typeSupport: "Excellent",
-    documentation: 96,
-    communitySupport: 92,
-  },
-  "8": {
-    id: "8",
-    name: "SWR",
-    description: "React Hooks for Data Fetching",
-    category: "Data Fetching",
-    website: "https://swr.vercel.app",
-    github: "https://github.com/vercel/swr",
-    npm: "https://www.npmjs.com/package/swr",
-    stars: 25000,
-    version: "2.0.0",
-    license: "MIT",
-    lastUpdate: "2 weeks ago",
-    firstRelease: "October 2019",
-    weeklyDownloads: 1100000,
-    contributors: 206,
-    dependencies: ["use-sync-external-store"],
-    bundle: {
-      size: "6.4 kB",
-      gzipped: "2.5 kB"
-    },
-    performance: {
-      loadTime: 94,
-      renderTime: 92,
-      memoryUsage: 90
-    },
-    securityIssues: 0,
-    codeMaintainability: 92,
-    typeSupport: "Excellent",
-    documentation: 90,
-    communitySupport: 88,
-  },
-};
+// // Mock data
+// const librariesData = {
+//   "1": {
+//     id: "1",
+//     name: "React.js",
+//     description: "A JavaScript library for building user interfaces",
+//     category: "Frontend Framework",
+//     website: "https://reactjs.org",
+//     github: "https://github.com/facebook/react",
+//     npm: "https://www.npmjs.com/package/react",
+//     stars: 198000,
+//     version: "18.2.0",
+//     license: "MIT",
+//     lastUpdate: "2 months ago",
+//     firstRelease: "May 29, 2013",
+//     weeklyDownloads: 15700000,
+//     contributors: 1602,
+//     dependencies: ["loose-envify", "object-assign", "scheduler"],
+//     bundle: {
+//       size: "42.2 kB",
+//       gzipped: "13.8 kB"
+//     },
+//     performance: {
+//       loadTime: 82,
+//       renderTime: 76,
+//       memoryUsage: 68
+//     },
+//     securityIssues: 0,
+//     codeMaintainability: 94,
+//     typeSupport: "Excellent",
+//     documentation: 96,
+//     communitySupport: 98,
+//   },
+//   "2": {
+//     id: "2",
+//     name: "Vue.js",
+//     description: "Progressive JavaScript framework for building UIs",
+//     category: "Frontend Framework",
+//     website: "https://vuejs.org",
+//     github: "https://github.com/vuejs/vue",
+//     npm: "https://www.npmjs.com/package/vue",
+//     stars: 197000,
+//     version: "3.2.45",
+//     license: "MIT",
+//     lastUpdate: "1 month ago",
+//     firstRelease: "February 2014",
+//     weeklyDownloads: 4900000,
+//     contributors: 368,
+//     dependencies: [],
+//     bundle: {
+//       size: "33.1 kB",
+//       gzipped: "11.9 kB"
+//     },
+//     performance: {
+//       loadTime: 90,
+//       renderTime: 88,
+//       memoryUsage: 72
+//     },
+//     securityIssues: 0,
+//     codeMaintainability: 92,
+//     typeSupport: "Good",
+//     documentation: 98,
+//     communitySupport: 90,
+//   },
+//   "3": {
+//     id: "3",
+//     name: "Angular",
+//     description: "Platform for building mobile and desktop web applications",
+//     category: "Frontend Framework",
+//     website: "https://angular.io",
+//     github: "https://github.com/angular/angular",
+//     npm: "https://www.npmjs.com/package/@angular/core",
+//     stars: 85000,
+//     version: "15.0.4",
+//     license: "MIT",
+//     lastUpdate: "2 weeks ago",
+//     firstRelease: "September 2016",
+//     weeklyDownloads: 2300000,
+//     contributors: 1482,
+//     dependencies: ["rxjs", "tslib", "zone.js"],
+//     bundle: {
+//       size: "148 kB",
+//       gzipped: "38.4 kB"
+//     },
+//     performance: {
+//       loadTime: 65,
+//       renderTime: 70,
+//       memoryUsage: 85
+//     },
+//     securityIssues: 0,
+//     codeMaintainability: 85,
+//     typeSupport: "Excellent",
+//     documentation: 95,
+//     communitySupport: 85,
+//   },
+//   "4": {
+//     id: "4",
+//     name: "Svelte",
+//     description: "Cybernetically enhanced web apps",
+//     category: "Frontend Framework",
+//     website: "https://svelte.dev",
+//     github: "https://github.com/sveltejs/svelte",
+//     npm: "https://www.npmjs.com/package/svelte",
+//     stars: 62000,
+//     version: "3.55.0",
+//     license: "MIT",
+//     lastUpdate: "3 weeks ago",
+//     firstRelease: "November 2016",
+//     weeklyDownloads: 950000,
+//     contributors: 562,
+//     dependencies: [],
+//     bundle: {
+//       size: "0 kB (compiled away)",
+//       gzipped: "0 kB (compiled away)"
+//     },
+//     performance: {
+//       loadTime: 98,
+//       renderTime: 96,
+//       memoryUsage: 95
+//     },
+//     securityIssues: 0,
+//     codeMaintainability: 88,
+//     typeSupport: "Good",
+//     documentation: 85,
+//     communitySupport: 75,
+//   },
+//   "5": {
+//     id: "5",
+//     name: "Redux",
+//     description: "Predictable state container for JavaScript apps",
+//     category: "State Management",
+//     website: "https://redux.js.org",
+//     github: "https://github.com/reduxjs/redux",
+//     npm: "https://www.npmjs.com/package/redux",
+//     stars: 57000,
+//     version: "4.2.0",
+//     license: "MIT",
+//     lastUpdate: "5 months ago",
+//     firstRelease: "June 2015",
+//     weeklyDownloads: 7100000,
+//     contributors: 894,
+//     dependencies: [],
+//     bundle: {
+//       size: "2.6 kB",
+//       gzipped: "1.1 kB"
+//     },
+//     performance: {
+//       loadTime: 95,
+//       renderTime: 85,
+//       memoryUsage: 90
+//     },
+//     securityIssues: 0,
+//     codeMaintainability: 90,
+//     typeSupport: "Excellent",
+//     documentation: 92,
+//     communitySupport: 90,
+//   },
+//   "6": {
+//     id: "6",
+//     name: "Zustand",
+//     description: "Small, fast and scalable state-management solution",
+//     category: "State Management",
+//     website: "https://github.com/pmndrs/zustand",
+//     github: "https://github.com/pmndrs/zustand",
+//     npm: "https://www.npmjs.com/package/zustand",
+//     stars: 23000,
+//     version: "4.1.5",
+//     license: "MIT",
+//     lastUpdate: "1 week ago",
+//     firstRelease: "October 2019",
+//     weeklyDownloads: 1500000,
+//     contributors: 184,
+//     dependencies: ["use-sync-external-store"],
+//     bundle: {
+//       size: "1.1 kB",
+//       gzipped: "0.5 kB"
+//     },
+//     performance: {
+//       loadTime: 97,
+//       renderTime: 95,
+//       memoryUsage: 97
+//     },
+//     securityIssues: 0,
+//     codeMaintainability: 95,
+//     typeSupport: "Excellent",
+//     documentation: 85,
+//     communitySupport: 80,
+//   },
+//   "7": {
+//     id: "7",
+//     name: "TanStack Query",
+//     description: "Powerful asynchronous state management for TS/JS",
+//     category: "Data Fetching",
+//     website: "https://tanstack.com/query",
+//     github: "https://github.com/tanstack/query",
+//     npm: "https://www.npmjs.com/package/@tanstack/react-query",
+//     stars: 31000,
+//     version: "4.20.4",
+//     license: "MIT",
+//     lastUpdate: "5 days ago",
+//     firstRelease: "March 2019",
+//     weeklyDownloads: 2300000,
+//     contributors: 534,
+//     dependencies: ["@tanstack/query-core"],
+//     bundle: {
+//       size: "12.6 kB",
+//       gzipped: "4.2 kB"
+//     },
+//     performance: {
+//       loadTime: 92,
+//       renderTime: 88,
+//       memoryUsage: 82
+//     },
+//     securityIssues: 0,
+//     codeMaintainability: 94,
+//     typeSupport: "Excellent",
+//     documentation: 96,
+//     communitySupport: 92,
+//   },
+//   "8": {
+//     id: "8",
+//     name: "SWR",
+//     description: "React Hooks for Data Fetching",
+//     category: "Data Fetching",
+//     website: "https://swr.vercel.app",
+//     github: "https://github.com/vercel/swr",
+//     npm: "https://www.npmjs.com/package/swr",
+//     stars: 25000,
+//     version: "2.0.0",
+//     license: "MIT",
+//     lastUpdate: "2 weeks ago",
+//     firstRelease: "October 2019",
+//     weeklyDownloads: 1100000,
+//     contributors: 206,
+//     dependencies: ["use-sync-external-store"],
+//     bundle: {
+//       size: "6.4 kB",
+//       gzipped: "2.5 kB"
+//     },
+//     performance: {
+//       loadTime: 94,
+//       renderTime: 92,
+//       memoryUsage: 90
+//     },
+//     securityIssues: 0,
+//     codeMaintainability: 92,
+//     typeSupport: "Excellent",
+//     documentation: 90,
+//     communitySupport: 88,
+//   },
+// };
+
+
 
 const categories = ["Frontend Framework", "State Management", "Data Fetching", "UI Components", "CSS Framework"];
 
@@ -285,6 +288,35 @@ const ComparisonPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [isComparing, setIsComparing] = useState(false);
   const { toast } = useToast();
+
+
+
+  useEffect(() => {
+    const loadAll = async () => {
+      const all = await fetchAllLibraries();
+      const byCategory: { [key: string]: any[] } = { All: [] };
+      all.forEach((library: any) => {
+        if (!byCategory[library.category]) byCategory[library.category] = [];
+        byCategory[library.category].push(library);
+        byCategory["All"].push(library);
+      });
+      setLibrariesByCategory(byCategory);
+      setLibraries(all.map((lib: any) => lib.id));
+  
+      const lib1 = searchParams.get("lib1");
+      const lib2 = searchParams.get("lib2");
+      const lib = searchParams.get("lib");
+  
+      if (lib1) setSelectedLibrary1(lib1);
+      if (lib2) setSelectedLibrary2(lib2);
+      if (lib && !lib1 && !lib2) setSelectedLibrary1(lib);
+      if ((lib1 && lib2) || (lib1 && selectedLibrary2) || (lib2 && selectedLibrary1)) {
+        setIsComparing(true);
+      }
+    };
+  
+    loadAll();
+  }, [searchParams]);
 
   // Parse URL parameters
   useEffect(() => {
