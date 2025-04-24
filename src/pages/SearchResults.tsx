@@ -348,7 +348,7 @@ const categories = [
 ];
 
 type Library = {
-  id: string,
+  _id: string,
   name: string,
   description: string,
   longDescription: string,
@@ -366,7 +366,7 @@ type Library = {
   contributors: number,
   usedBy: [string],
   dependencies: [string],
-  os: [string],
+  supportedOs: [string],
   bundle: {
     size: string,
     gzipped: string,
@@ -383,7 +383,7 @@ type Library = {
   securityIssues: number,
   testCoverage: number,
   alternatives: [string],
-  code: string,
+  useageExample: string,
   codeMaintainability: number,
   typeSupport: string,
   documentation: number,
@@ -1270,8 +1270,8 @@ const SearchResults = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {filteredLibraries.map((library) => (
                   <Link
-                    key={library.id}
-                    to={`/library/${library.id}`}
+                    key={library._id}
+                    to={`/library/${library._id}`}
                     className="block"
                   >
                     <Card className="glass-card hover:border-accent/30 hover:bg-card/80 transition-colors overflow-hidden h-full">
@@ -1285,12 +1285,12 @@ const SearchResults = () => {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              toggleFavorite(library.id);
+                              toggleFavorite(library._id);
                             }}
                           >
                             <Bookmark 
                               size={16} 
-                              className={favoriteLibraries.includes(library.id) ? "fill-accent text-accent" : ""}
+                              className={favoriteLibraries.includes(library._id) ? "fill-accent text-accent" : ""}
                             />
                           </Button>
                         </div>
@@ -1340,13 +1340,13 @@ const SearchResults = () => {
               <div className="space-y-4">
                 {filteredLibraries.map((library) => (
                   <motion.div
-                    key={library.id}
+                    key={library._id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
                   >
                     <Link
-                      to={`/library/${library.id}`}
+                      to={`/library/${library._id}`}
                       className="block"
                     >
                       <Card className="glass-card hover:border-accent/30 hover:bg-card/80 transition-colors overflow-hidden">
@@ -1362,12 +1362,12 @@ const SearchResults = () => {
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    toggleFavorite(library.id);
+                                    toggleFavorite(library._id);
                                   }}
                                 >
                                   <Bookmark 
                                     size={16} 
-                                    className={favoriteLibraries.includes(library.id) ? "fill-accent text-accent" : ""}
+                                    className={favoriteLibraries.includes(library._id) ? "fill-accent text-accent" : ""}
                                   />
                                 </Button>
                               </div>
@@ -1419,12 +1419,12 @@ const SearchResults = () => {
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    toggleFavorite(library.id);
+                                    toggleFavorite(library._id);
                                   }}
                                 >
                                   <Bookmark 
                                     size={16} 
-                                    className={favoriteLibraries.includes(library.id) ? "fill-accent text-accent" : ""}
+                                    className={favoriteLibraries.includes(library._id) ? "fill-accent text-accent" : ""}
                                   />
                                 </Button>
                               </div>

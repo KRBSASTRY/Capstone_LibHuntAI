@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { 
-  ArrowLeft, Star, Download, ExternalLink, Calendar, Package, Bookmark, 
+import {
+  ArrowLeft, Star, Download, ExternalLink, Calendar, Package, Bookmark,
   Box, Share2, Code, Server, Cpu, GitBranch, Clock, Heart, FileCheck, Scale,
   Thermometer, GitFork, RefreshCw, Users, Shield, Check, BookOpen, BarChart, ArrowRight
 } from "lucide-react";
@@ -17,113 +17,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { fetchLibraryById } from "@/services/libraryService";
 
-// Mock library data
-const libraryData = {
-  "1": {
-    id: "1",
-    name: "React.js",
-    description: "A JavaScript library for building user interfaces",
-    longDescription: "React is a declarative, efficient, and flexible JavaScript library for building user interfaces. It lets you compose complex UIs from small and isolated pieces of code called 'components'. React has been designed from the start for gradual adoption, and you can use as little or as much React as you need.",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/React-icon.svg/1200px-React-icon.svg.png",
-    category: "Frontend Framework",
-    website: "https://reactjs.org",
-    github: "https://github.com/facebook/react",
-    npm: "https://www.npmjs.com/package/react",
-    stars: 198000,
-    version: "18.2.0",
-    license: "MIT",
-    lastUpdate: "2 months ago",
-    firstRelease: "May 29, 2013",
-    weeklyDownloads: 15700000,
-    issues: {
-      open: 760,
-      closed: 11300
-    },
-    contributors: 1602,
-    usedBy: ["Facebook", "Instagram", "Netflix", "Airbnb", "Dropbox"],
-    dependencies: ["loose-envify", "object-assign", "scheduler"],
-    os: ["Windows", "macOS", "Linux", "iOS", "Android"],
-    bundle: {
-      size: "42.2 kB",
-      gzipped: "13.8 kB"
-    },
-    performance: {
-      loadTime: 82,
-      renderTime: 76,
-      memoryUsage: 68
-    },
-    securityIssues: 0,
-    testCoverage: 88,
-    alternatives: ["Vue.js", "Angular", "Svelte", "Preact"],
-    code: `import React from 'react';
-import ReactDOM from 'react-dom';
-
-function App() {
-  return (
-    <div>
-      <h1>Hello, world!</h1>
-      <p>Welcome to React</p>
-    </div>
-  );
-}
-
-ReactDOM.render(<App />, document.getElementById('root'));`,
-  },
-  "2": {
-    id: "2",
-    name: "Vue.js",
-    description: "Progressive JavaScript framework for building UIs",
-    longDescription: "Vue is a progressive framework for building user interfaces. Unlike other monolithic frameworks, Vue is designed from the ground up to be incrementally adoptable. The core library is focused on the view layer only, and is easy to pick up and integrate with other libraries or existing projects.",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Vue.js_Logo_2.svg/1200px-Vue.js_Logo_2.svg.png",
-    category: "Frontend Framework",
-    website: "https://vuejs.org",
-    github: "https://github.com/vuejs/vue",
-    npm: "https://www.npmjs.com/package/vue",
-    stars: 197000,
-    version: "3.2.45",
-    license: "MIT",
-    lastUpdate: "1 month ago",
-    firstRelease: "February 2014",
-    weeklyDownloads: 4900000,
-    issues: {
-      open: 580,
-      closed: 9800
-    },
-    contributors: 368,
-    usedBy: ["Alibaba", "Xiaomi", "Gitlab", "Adobe", "Behance"],
-    dependencies: [],
-    os: ["Windows", "macOS", "Linux", "iOS", "Android"],
-    bundle: {
-      size: "33.1 kB",
-      gzipped: "11.9 kB"
-    },
-    performance: {
-      loadTime: 78,
-      renderTime: 72,
-      memoryUsage: 65
-    },
-    securityIssues: 0,
-    testCoverage: 90,
-    alternatives: ["React", "Angular", "Svelte", "Preact"],
-    code: `<template>
-  <div>
-    <h1>{{ greeting }}</h1>
-    <p>Welcome to Vue</p>
-  </div>
-</template>
-
-<script>
-export default {
-  data() {
-    return {
-      greeting: 'Hello, world!'
-    }
-  }
-}
-</script>`,
-  },
-  // Add more mock data as needed
-};
 
 const LibraryDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -131,21 +24,23 @@ const LibraryDetail = () => {
   const [loading, setLoading] = useState(true);
   const [favorited, setFavorited] = useState(false);
   const { toast } = useToast();
-  
+
   useEffect(() => {
     const loadLibrary = async () => {
       try {
+        console.log("📦 Fetching library with ID:", id);
         const data = await fetchLibraryById(id!);
+        console.log("✅ Received library:", data);
         setLibrary(data);
       } catch (error) {
-        console.error("Error loading library:", error);
+        console.error("❌ Error loading library:", error);
       } finally {
         setLoading(false);
       }
     };
     if (id) loadLibrary();
   }, [id]);
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -153,57 +48,64 @@ const LibraryDetail = () => {
       </div>
     );
   }
-  
+
   if (!library) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Library Not Found</h1>
           <p className="text-muted-foreground mb-6">The library you're looking for doesn't exist or has been removed.</p>
-          <Button asChild>
-            <Link to="/dashboard">
-              <ArrowLeft size={16} className="mr-2" />
-              Back to Dashboard
+          <Button
+            variant="ghost"
+            asChild
+            className="gap-2 hover:bg-white/5"
+          >
+            <Link to="/search">
+              <ArrowLeft size={16} />
+              Back to Search
             </Link>
           </Button>
+
         </div>
       </div>
     );
   }
-  
+
   const toggleFavorite = () => {
     setFavorited(!favorited);
-    
+
     toast({
       title: favorited ? "Removed from favorites" : "Added to favorites",
-      description: favorited 
-        ? `${library.name} has been removed from your favorites` 
+      description: favorited
+        ? `${library.name} has been removed from your favorites`
         : `${library.name} has been added to your favorites`,
     });
   };
-  
+
   const handleCompare = () => {
     // Navigate to compare page with this library pre-selected
-    window.location.href = `/compare?lib=${library.id}`;
+    window.location.href = `/compare?lib=${library._id}`;
   };
-  
+
   return (
     <div className="min-h-screen py-10 px-6">
       <div className="max-w-7xl mx-auto">
         {/* Back button */}
         <div className="mb-6">
-          <Button 
-            variant="ghost" 
-            asChild 
-            className="gap-2 hover:bg-white/5"
-          >
-            <Link to="/dashboard">
-              <ArrowLeft size={16} />
-              Back to Dashboard
-            </Link>
-          </Button>
+        <Button 
+  variant="ghost" 
+  asChild 
+  className="gap-2 hover:bg-white/5"
+>
+  <Link to="/search">
+    <ArrowLeft size={16} />
+    Back to Search
+  </Link>
+</Button>
+
+
         </div>
-        
+
         {/* Library header */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
@@ -213,7 +115,7 @@ const LibraryDetail = () => {
         >
           {/* Background gradient */}
           <div className="absolute inset-0 bg-gradient-to-br from-accent/10 to-transparent pointer-events-none"></div>
-          
+
           <div className="flex flex-col md:flex-row gap-6 items-center md:items-start relative z-10">
             {/* Logo */}
             <div className="w-24 h-24 rounded-xl glass flex items-center justify-center p-2 overflow-hidden shrink-0">
@@ -223,7 +125,7 @@ const LibraryDetail = () => {
                 <Package size={40} className="text-accent" />
               )}
             </div>
-            
+
             {/* Basic info */}
             <div className="flex-1 text-center md:text-left">
               <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
@@ -232,38 +134,38 @@ const LibraryDetail = () => {
                   {library.category}
                 </Badge>
               </div>
-              
+
               <p className="text-xl text-muted-foreground mb-4 max-w-3xl">
                 {library.description}
               </p>
-              
+
               <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-4">
                 <div className="flex items-center gap-1 text-amber-400">
                   <Star size={18} className="fill-amber-400" />
-                  <span>{library.stars.toLocaleString()}</span>
+                  <span>{library.stars ? library.stars.toLocaleString() : "0"}</span>
                 </div>
-                
+
                 <div className="flex items-center gap-1">
                   <Package size={18} className="text-muted-foreground" />
                   <span>v{library.version}</span>
                 </div>
-                
+
                 <div className="flex items-center gap-1">
                   <Calendar size={18} className="text-muted-foreground" />
                   <span>Updated {library.lastUpdate}</span>
                 </div>
-                
+
                 <div className="flex items-center gap-1">
                   <Download size={18} className="text-muted-foreground" />
                   <span>{(library.weeklyDownloads / 1000000).toFixed(1)}M weekly downloads</span>
                 </div>
-                
+
                 <div className="flex items-center gap-1">
                   <FileCheck size={18} className="text-muted-foreground" />
                   <span>{library.license}</span>
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                 <Button asChild>
                   <a href={library.website} target="_blank" rel="noopener noreferrer" className="gap-2">
@@ -271,30 +173,30 @@ const LibraryDetail = () => {
                     Website
                   </a>
                 </Button>
-                
+
                 <Button asChild variant="outline">
                   <a href={library.github} target="_blank" rel="noopener noreferrer" className="gap-2">
                     <GitBranch size={16} />
                     GitHub
                   </a>
                 </Button>
-                
+
                 <Button asChild variant="outline">
                   <a href={library.npm} target="_blank" rel="noopener noreferrer" className="gap-2">
                     <Package size={16} />
                     NPM
                   </a>
                 </Button>
-                
-                <Button 
-                  variant={favorited ? "default" : "outline"} 
+
+                <Button
+                  variant={favorited ? "default" : "outline"}
                   onClick={toggleFavorite}
                   className="gap-2"
                 >
                   <Heart size={16} className={favorited ? "fill-current" : ""} />
                   {favorited ? "Favorited" : "Add to Favorites"}
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   onClick={handleCompare}
@@ -307,7 +209,7 @@ const LibraryDetail = () => {
             </div>
           </div>
         </motion.section>
-        
+
         {/* Library details */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
@@ -322,7 +224,7 @@ const LibraryDetail = () => {
               <TabsTrigger value="alternatives">Alternatives</TabsTrigger>
               <TabsTrigger value="reviews">Reviews</TabsTrigger>
             </TabsList>
-            
+
             {/* Overview tab */}
             <TabsContent value="overview" className="space-y-8">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -334,14 +236,14 @@ const LibraryDetail = () => {
                       <p className="text-muted-foreground">{library.longDescription}</p>
                     </CardContent>
                   </Card>
-                  
+
                   {/* Used by */}
                   <Card className="glass-card">
                     <CardContent className="p-6">
                       <h2 className="text-xl font-display font-medium mb-4">Used By</h2>
                       <div className="flex flex-wrap gap-3">
                         {library.usedBy.map((company: string) => (
-                          <div 
+                          <div
                             key={company}
                             className="px-4 py-2 bg-white/5 rounded-lg border border-white/10"
                           >
@@ -351,12 +253,12 @@ const LibraryDetail = () => {
                       </div>
                     </CardContent>
                   </Card>
-                  
+
                   {/* Performance */}
                   <Card className="glass-card">
                     <CardContent className="p-6">
                       <h2 className="text-xl font-display font-medium mb-4">Performance</h2>
-                      
+
                       <div className="space-y-4">
                         <div>
                           <div className="flex justify-between mb-2">
@@ -365,7 +267,7 @@ const LibraryDetail = () => {
                           </div>
                           <Progress value={library.performance.loadTime} className="h-2" />
                         </div>
-                        
+
                         <div>
                           <div className="flex justify-between mb-2">
                             <span>Render Time</span>
@@ -373,7 +275,7 @@ const LibraryDetail = () => {
                           </div>
                           <Progress value={library.performance.renderTime} className="h-2" />
                         </div>
-                        
+
                         <div>
                           <div className="flex justify-between mb-2">
                             <span>Memory Usage</span>
@@ -385,44 +287,44 @@ const LibraryDetail = () => {
                     </CardContent>
                   </Card>
                 </div>
-                
+
                 <div className="space-y-8">
                   {/* Key facts */}
                   <Card className="glass-card">
                     <CardContent className="p-6">
                       <h2 className="text-xl font-display font-medium mb-4">Key Information</h2>
-                      
+
                       <ul className="space-y-3">
                         <li className="flex justify-between">
                           <span className="text-muted-foreground">First Release</span>
                           <span>{library.firstRelease}</span>
                         </li>
                         <Separator className="bg-white/10" />
-                        
+
                         <li className="flex justify-between">
                           <span className="text-muted-foreground">Bundle Size</span>
                           <span>{library.bundle.size} (gzipped: {library.bundle.gzipped})</span>
                         </li>
                         <Separator className="bg-white/10" />
-                        
+
                         <li className="flex justify-between">
                           <span className="text-muted-foreground">Test Coverage</span>
                           <span>{library.testCoverage}%</span>
                         </li>
                         <Separator className="bg-white/10" />
-                        
+
                         <li className="flex justify-between">
                           <span className="text-muted-foreground">Contributors</span>
                           <span>{library.contributors}</span>
                         </li>
                         <Separator className="bg-white/10" />
-                        
+
                         <li className="flex justify-between">
                           <span className="text-muted-foreground">Open Issues</span>
                           <span>{library.issues.open}</span>
                         </li>
                         <Separator className="bg-white/10" />
-                        
+
                         <li className="flex justify-between">
                           <span className="text-muted-foreground">Security Issues</span>
                           <span>{library.securityIssues === 0 ? (
@@ -434,12 +336,12 @@ const LibraryDetail = () => {
                       </ul>
                     </CardContent>
                   </Card>
-                  
+
                   {/* Dependencies */}
                   <Card className="glass-card">
                     <CardContent className="p-6">
                       <h2 className="text-xl font-display font-medium mb-4">Dependencies</h2>
-                      
+
                       {library.dependencies.length === 0 ? (
                         <p className="text-muted-foreground">No dependencies</p>
                       ) : (
@@ -454,14 +356,14 @@ const LibraryDetail = () => {
                       )}
                     </CardContent>
                   </Card>
-                  
+
                   {/* OS Support */}
                   <Card className="glass-card">
                     <CardContent className="p-6">
                       <h2 className="text-xl font-display font-medium mb-4">OS Compatibility</h2>
-                      
+
                       <div className="flex flex-wrap gap-2">
-                        {library.os.map((os: string) => (
+                        {library.supportedOS.map((os: string) => (
                           <Badge key={os} variant="outline" className="bg-white/5">
                             {os}
                           </Badge>
@@ -472,7 +374,7 @@ const LibraryDetail = () => {
                 </div>
               </div>
             </TabsContent>
-            
+
             {/* Stats tab */}
             <TabsContent value="stats" className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -485,7 +387,7 @@ const LibraryDetail = () => {
                       </div>
                       <h3 className="font-medium">GitHub Stats</h3>
                     </div>
-                    
+
                     <ul className="space-y-3">
                       <li className="flex justify-between">
                         <span className="text-muted-foreground">Stars</span>
@@ -512,7 +414,7 @@ const LibraryDetail = () => {
                     </ul>
                   </CardContent>
                 </Card>
-                
+
                 {/* NPM stats */}
                 <Card className="glass-card">
                   <CardContent className="p-6">
@@ -522,7 +424,7 @@ const LibraryDetail = () => {
                       </div>
                       <h3 className="font-medium">NPM Stats</h3>
                     </div>
-                    
+
                     <ul className="space-y-3">
                       <li className="flex justify-between">
                         <span className="text-muted-foreground">Weekly Downloads</span>
@@ -549,7 +451,7 @@ const LibraryDetail = () => {
                     </ul>
                   </CardContent>
                 </Card>
-                
+
                 {/* Performance */}
                 <Card className="glass-card">
                   <CardContent className="p-6">
@@ -559,7 +461,7 @@ const LibraryDetail = () => {
                       </div>
                       <h3 className="font-medium">Performance</h3>
                     </div>
-                    
+
                     <ul className="space-y-3">
                       <li>
                         <div className="flex justify-between mb-1">
@@ -585,7 +487,7 @@ const LibraryDetail = () => {
                     </ul>
                   </CardContent>
                 </Card>
-                
+
                 {/* Size */}
                 <Card className="glass-card">
                   <CardContent className="p-6">
@@ -595,7 +497,7 @@ const LibraryDetail = () => {
                       </div>
                       <h3 className="font-medium">Bundle Size</h3>
                     </div>
-                    
+
                     <div className="relative pt-12 pb-6">
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-5xl font-display font-bold text-accent">
@@ -610,14 +512,14 @@ const LibraryDetail = () => {
                   </CardContent>
                 </Card>
               </div>
-              
+
               {/* Additional stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Health Score */}
                 <Card className="glass-card">
                   <CardContent className="p-6">
                     <h3 className="font-medium mb-4">Health Score</h3>
-                    
+
                     <div className="relative pt-20 pb-6">
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-6xl font-display font-bold text-gradient">
@@ -631,12 +533,12 @@ const LibraryDetail = () => {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 {/* Maintenance */}
                 <Card className="glass-card">
                   <CardContent className="p-6">
                     <h3 className="font-medium mb-4">Maintenance</h3>
-                    
+
                     <div className="space-y-4">
                       <div>
                         <div className="flex justify-between mb-1">
@@ -645,7 +547,7 @@ const LibraryDetail = () => {
                         </div>
                         <Progress value={95} className="h-2" />
                       </div>
-                      
+
                       <div>
                         <div className="flex justify-between mb-1">
                           <span className="text-muted-foreground">Issue Response</span>
@@ -653,7 +555,7 @@ const LibraryDetail = () => {
                         </div>
                         <Progress value={85} className="h-2" />
                       </div>
-                      
+
                       <div>
                         <div className="flex justify-between mb-1">
                           <span className="text-muted-foreground">Release Cadence</span>
@@ -661,7 +563,7 @@ const LibraryDetail = () => {
                         </div>
                         <Progress value={65} className="h-2" />
                       </div>
-                      
+
                       <div>
                         <div className="flex justify-between mb-1">
                           <span className="text-muted-foreground">Documentation</span>
@@ -672,12 +574,12 @@ const LibraryDetail = () => {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 {/* Community */}
                 <Card className="glass-card">
                   <CardContent className="p-6">
                     <h3 className="font-medium mb-4">Community & Support</h3>
-                    
+
                     <ul className="space-y-3">
                       <li className="flex items-center justify-between">
                         <span className="flex items-center gap-2">
@@ -686,9 +588,9 @@ const LibraryDetail = () => {
                         </span>
                         <span>24.5K+ questions</span>
                       </li>
-                      
+
                       <Separator className="bg-white/10" />
-                      
+
                       <li className="flex items-center justify-between">
                         <span className="flex items-center gap-2">
                           <BookOpen size={16} className="text-muted-foreground" />
@@ -699,9 +601,9 @@ const LibraryDetail = () => {
                           Comprehensive
                         </span>
                       </li>
-                      
+
                       <Separator className="bg-white/10" />
-                      
+
                       <li className="flex items-center justify-between">
                         <span className="flex items-center gap-2">
                           <RefreshCw size={16} className="text-muted-foreground" />
@@ -709,9 +611,9 @@ const LibraryDetail = () => {
                         </span>
                         <span>Every 2-3 months</span>
                       </li>
-                      
+
                       <Separator className="bg-white/10" />
-                      
+
                       <li className="flex items-center justify-between">
                         <span className="flex items-center gap-2">
                           <Shield size={16} className="text-muted-foreground" />
@@ -727,20 +629,20 @@ const LibraryDetail = () => {
                 </Card>
               </div>
             </TabsContent>
-            
+
             {/* Code Examples tab */}
             <TabsContent value="code" className="space-y-8">
               <Card className="glass-card">
                 <CardContent className="p-6">
                   <h2 className="text-xl font-display font-medium mb-4">Installation</h2>
-                  
+
                   <div className="space-y-4">
                     <div className="bg-black/30 rounded-lg p-4 font-mono text-sm">
                       <div className="flex justify-between">
                         <div>npm install {library.name.toLowerCase()}</div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-5 w-5 text-muted-foreground hover:text-foreground"
                           onClick={() => {
                             navigator.clipboard.writeText(`npm install ${library.name.toLowerCase()}`);
@@ -754,13 +656,13 @@ const LibraryDetail = () => {
                         </Button>
                       </div>
                     </div>
-                    
+
                     <div className="bg-black/30 rounded-lg p-4 font-mono text-sm">
                       <div className="flex justify-between">
                         <div>yarn add {library.name.toLowerCase()}</div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-5 w-5 text-muted-foreground hover:text-foreground"
                           onClick={() => {
                             navigator.clipboard.writeText(`yarn add ${library.name.toLowerCase()}`);
@@ -777,20 +679,20 @@ const LibraryDetail = () => {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card className="glass-card">
                 <CardContent className="p-6">
                   <h2 className="text-xl font-display font-medium mb-4">Basic Example</h2>
-                  
+
                   <ScrollArea className="max-h-[400px]">
                     <div className="bg-black/30 rounded-lg p-4 font-mono text-sm whitespace-pre overflow-x-auto">
                       {library.code}
                     </div>
                   </ScrollArea>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="mt-4 gap-2"
                     onClick={() => {
                       navigator.clipboard.writeText(library.code);
@@ -805,7 +707,7 @@ const LibraryDetail = () => {
                   </Button>
                 </CardContent>
               </Card>
-              
+
               <div className="flex justify-center">
                 <Button asChild className="gap-2">
                   <a href={`${library.website}/docs`} target="_blank" rel="noopener noreferrer">
@@ -815,7 +717,7 @@ const LibraryDetail = () => {
                 </Button>
               </div>
             </TabsContent>
-            
+
             {/* Alternatives tab */}
             <TabsContent value="alternatives" className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -824,11 +726,11 @@ const LibraryDetail = () => {
                     <CardContent className="p-0">
                       <div className="p-6">
                         <h3 className="text-lg font-medium mb-2">{alt}</h3>
-                        
+
                         <p className="text-sm text-muted-foreground mb-4">
                           {getAlternativeDescription(alt)}
                         </p>
-                        
+
                         {/* Comparison chart */}
                         <div className="space-y-3 mb-4">
                           <div>
@@ -838,13 +740,13 @@ const LibraryDetail = () => {
                             </div>
                             <div className="flex items-center gap-2">
                               <Progress value={getScore(alt, "performance")} className="h-1.5 flex-1" />
-                              <Progress 
-                                value={library.performance.loadTime} 
+                              <Progress
+                                value={library.performance.loadTime}
                                 className="h-1.5 w-1.5 bg-white/20"
                               />
                             </div>
                           </div>
-                          
+
                           <div>
                             <div className="flex justify-between text-xs mb-1">
                               <span>Popularity</span>
@@ -852,13 +754,13 @@ const LibraryDetail = () => {
                             </div>
                             <div className="flex items-center gap-2">
                               <Progress value={getScore(alt, "popularity")} className="h-1.5 flex-1" />
-                              <Progress 
-                                value={90} 
+                              <Progress
+                                value={90}
                                 className="h-1.5 w-1.5 bg-white/20"
                               />
                             </div>
                           </div>
-                          
+
                           <div>
                             <div className="flex justify-between text-xs mb-1">
                               <span>Ease of Use</span>
@@ -866,19 +768,19 @@ const LibraryDetail = () => {
                             </div>
                             <div className="flex items-center gap-2">
                               <Progress value={getScore(alt, "ease")} className="h-1.5 flex-1" />
-                              <Progress 
-                                value={85} 
+                              <Progress
+                                value={85}
                                 className="h-1.5 w-1.5 bg-white/20"
                               />
                             </div>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="border-t border-white/10 p-4 flex justify-between">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           asChild
                           className="text-xs"
                         >
@@ -886,10 +788,10 @@ const LibraryDetail = () => {
                             View Details
                           </Link>
                         </Button>
-                        
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="text-xs gap-1"
                           onClick={() => {
                             window.location.href = `/compare?lib1=${library.id}&lib2=${getAlternativeId(alt)}`;
@@ -903,7 +805,7 @@ const LibraryDetail = () => {
                   </Card>
                 ))}
               </div>
-              
+
               <div className="text-center">
                 <Button asChild variant="outline" className="gap-2">
                   <Link to={`/search?category=${library.category.toLowerCase()}`}>
@@ -913,7 +815,7 @@ const LibraryDetail = () => {
                 </Button>
               </div>
             </TabsContent>
-            
+
             {/* Reviews tab */}
             <TabsContent value="reviews" className="space-y-8">
               <Card className="glass-card">
@@ -921,15 +823,15 @@ const LibraryDetail = () => {
                   <div className="flex justify-center mb-2">
                     <div className="text-6xl font-display font-bold text-gradient">4.8</div>
                   </div>
-                  
+
                   <div className="flex justify-center mb-4">
                     {[1, 2, 3, 4, 5].map((_, i) => (
                       <Star key={i} className={`h-6 w-6 ${i < 5 ? "text-amber-400 fill-amber-400" : "text-muted-foreground"}`} />
                     ))}
                   </div>
-                  
+
                   <p className="text-muted-foreground mb-6">Based on 1,248 reviews</p>
-                  
+
                   <div className="flex justify-center">
                     <Button className="gap-2">
                       <BarChart size={16} />
@@ -938,7 +840,7 @@ const LibraryDetail = () => {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <div className="space-y-6">
                 {/* Some mock reviews */}
                 {[
@@ -968,19 +870,19 @@ const LibraryDetail = () => {
                           <div className="font-medium">{review.name}</div>
                           <div className="text-sm text-muted-foreground">{review.date}</div>
                         </div>
-                        
+
                         <div className="flex">
                           {[1, 2, 3, 4, 5].map((_, i) => (
                             <Star key={i} className={`h-4 w-4 ${i < review.rating ? "text-amber-400 fill-amber-400" : "text-muted-foreground"}`} />
                           ))}
                         </div>
                       </div>
-                      
+
                       <p className="text-muted-foreground">{review.comment}</p>
                     </CardContent>
                   </Card>
                 ))}
-                
+
                 <div className="text-center">
                   <Button variant="outline">
                     Load More Reviews
@@ -997,7 +899,7 @@ const LibraryDetail = () => {
 
 // Helper functions for alternative libraries
 const getAlternativeDescription = (name: string) => {
-  const descriptions: {[key: string]: string} = {
+  const descriptions: { [key: string]: string } = {
     "Vue.js": "Progressive JavaScript framework focused on building UIs with an incrementally adoptable architecture.",
     "Angular": "Platform and framework for building single-page client applications using HTML and TypeScript.",
     "Svelte": "Radical new approach to building user interfaces that shifts work from runtime to compile time.",
@@ -1007,7 +909,7 @@ const getAlternativeDescription = (name: string) => {
     "Recoil": "Experimental state management library for React apps focusing on data-flow graph.",
     "jQuery": "Fast, small, and feature-rich JavaScript library for HTML document traversal and manipulation.",
   };
-  
+
   return descriptions[name] || "An alternative framework or library with similar functionality.";
 };
 
@@ -1018,7 +920,7 @@ const getAlternativeId = (name: string): string => {
 
 const getScore = (name: string, category: string): number => {
   // Mock scores for alternative comparison
-  const scores: {[key: string]: {[key: string]: number}} = {
+  const scores: { [key: string]: { [key: string]: number } } = {
     "Vue.js": {
       performance: 90,
       popularity: 85,
@@ -1040,7 +942,7 @@ const getScore = (name: string, category: string): number => {
       ease: 80
     }
   };
-  
+
   return scores[name]?.[category] || Math.floor(Math.random() * 20) + 75;
 };
 

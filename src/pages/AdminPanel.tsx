@@ -35,24 +35,53 @@ const categories = [
 ];
 const licenses = ["MIT", "Apache-2.0", "GPL-3.0", "BSD-3-Clause", "ISC"];
 
-type Library = {
-  _id: string;
+type Library  = {
   name: string;
   description: string;
+  longDescription: string;
+  logo: string;
   category: string;
   version: string;
   license: string;
   cost: string;
-  supportedOS: string[];
+  website: string;
+  github: string;
+  npm: string;
+  firstRelease: string;
+  lastUpdate: string;
+  weeklyDownloads: number;
+  contributors: number;
+  usedBy: string[];
   dependencies: string[];
+  supportedOS: string[];
+  bundle: {
+    size: string;
+    gzipped: string;
+  };
+  performance: {
+    loadTime: number;
+    renderTime: number;
+    memoryUsage: number;
+  };
+  issues: {
+    open: number;
+    closed: number;
+  };
+  securityIssues: number;
+  testCoverage: number;
+  alternatives: string[];
+  codeMaintainability: number;
+  typeSupport: string;
+  documentation: number;
+  communitySupport: number;
   popularity: {
     stars: number;
     downloads: number;
   };
   usageExample: string;
-  lastUpdate: string;
   featured?: boolean;
 };
+
 
 
 const AdminPanel = () => {
@@ -74,11 +103,11 @@ const AdminPanel = () => {
   const handleJSONUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-  
+
     try {
       const text = await file.text();
       const json = JSON.parse(text);
-  
+
       if (!Array.isArray(json)) {
         toast({
           title: "Invalid Format",
@@ -87,9 +116,9 @@ const AdminPanel = () => {
         });
         return;
       }
-  
+
       const token = localStorage.getItem("libhunt-token");
-  
+
       const response = await fetch("http://localhost:5002/api/libraries/bulk", {
         method: "POST",
         headers: {
@@ -98,18 +127,19 @@ const AdminPanel = () => {
         },
         body: JSON.stringify(json),
       });
-  
+
       const data = await response.json();
-  
+
       if (!response.ok) {
         throw new Error(data?.error || "Unknown error");
       }
-  
+
       toast({
         title: "Upload Successful",
-        description: `${data.length} libraries added to the database.`,
+        description: data.message,
+
       });
-  
+
     } catch (err: any) {
       toast({
         title: "Upload Failed",
@@ -118,14 +148,14 @@ const AdminPanel = () => {
       });
     }
   };
-  
-  
+
+
 
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await libraryService.fetchLibraries();
+        const data = await libraryService.fetchAllLibraries();
         setLibraries(data);
       } catch {
         toast({
@@ -160,7 +190,39 @@ const AdminPanel = () => {
 
   const handleAddNew = () => {
     setIsEditing(false);
-    setCurrentLibrary({ name: "", description: "", category: "", license: "MIT", version: "", stars: 0 });
+    setCurrentLibrary({
+      name: "",
+      description: "",
+      longDescription: "",
+      logo: "",
+      category: "",
+      version: "",
+      license: "MIT",
+      cost: "Free",
+      website: "",
+      github: "",
+      npm: "",
+      firstRelease: "",
+      lastUpdate: "",
+      weeklyDownloads: 0,
+      contributors: 0,
+      usedBy: [],
+      dependencies: [],
+      supportedOS: [],
+      bundle: { size: "", gzipped: "" },
+      performance: { loadTime: 0, renderTime: 0, memoryUsage: 0 },
+      issues: { open: 0, closed: 0 },
+      securityIssues: 0,
+      testCoverage: 0,
+      alternatives: [],
+      codeMaintainability: 0,
+      typeSupport: "",
+      documentation: 0,
+      communitySupport: 0,
+      popularity: { stars: 0, downloads: 0 },
+      usageExample: "",
+      featured: false,
+    });    
     setDialogOpen(true);
   };
 
@@ -309,132 +371,83 @@ const AdminPanel = () => {
 
       {/* Add/Edit Modal */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{isEditing ? "Edit Library" : "Add Library"}</DialogTitle>
-            <DialogDescription>Fill in all the required details</DialogDescription>
-          </DialogHeader>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+    <DialogTitle>{isEditing ? "Edit Library" : "Add Library"}</DialogTitle>
+    <DialogDescription>Fill in all the required details</DialogDescription>
+  </DialogHeader>
 
           <div className="space-y-4">
-            <Input
-              placeholder="Library Name"
-              value={currentLibrary?.name || ""}
-              onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, name: e.target.value }))}
-            />
+            {/* Basic Fields */}
+            <Input placeholder="Library Name" value={currentLibrary?.name || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, name: e.target.value }))} />
+            <Textarea placeholder="Short Description" value={currentLibrary?.description || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, description: e.target.value }))} />
+            <Textarea placeholder="Long Description" value={currentLibrary?.longDescription || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, longDescription: e.target.value }))} />
+            <Input placeholder="Logo URL" value={currentLibrary?.logo || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, logo: e.target.value }))} />
+            <Input placeholder="Category" value={currentLibrary?.category || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, category: e.target.value }))} />
+            <Input placeholder="Version" value={currentLibrary?.version || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, version: e.target.value }))} />
 
-            <Textarea
-              placeholder="Description"
-              value={currentLibrary?.description || ""}
-              onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, description: e.target.value }))}
-            />
-
-            <Input
-              placeholder="Category"
-              value={currentLibrary?.category || ""}
-              onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, category: e.target.value }))}
-            />
-
-            <Input
-              placeholder="Version"
-              value={currentLibrary?.version || ""}
-              onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, version: e.target.value }))}
-            />
-
-            <Select
-              value={currentLibrary?.license || "MIT"}
-              onValueChange={(value) => setCurrentLibrary(prev => ({ ...prev!, license: value }))}
-            >
+            {/* Licensing & Links */}
+            <Select value={currentLibrary?.license || "MIT"} onValueChange={(value) => setCurrentLibrary(prev => ({ ...prev!, license: value }))}>
               <SelectTrigger><SelectValue placeholder="Select license" /></SelectTrigger>
-              <SelectContent>
-                {licenses.map((l) => (
-                  <SelectItem key={l} value={l}>{l}</SelectItem>
-                ))}
-              </SelectContent>
+              <SelectContent>{licenses.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
             </Select>
+            <Input placeholder="Cost (e.g. Free, Paid)" value={currentLibrary?.cost || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, cost: e.target.value }))} />
+            <Input placeholder="Website URL" value={currentLibrary?.website || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, website: e.target.value }))} />
+            <Input placeholder="GitHub URL" value={currentLibrary?.github || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, github: e.target.value }))} />
+            <Input placeholder="NPM URL" value={currentLibrary?.npm || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, npm: e.target.value }))} />
 
-            <Input
-              placeholder="Cost (e.g. Free, Paid)"
-              value={currentLibrary?.cost || ""}
-              onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, cost: e.target.value }))}
-            />
+            {/* Arrays */}
+            <Input placeholder="Supported OS (comma-separated)" value={(currentLibrary?.supportedOS || []).join(", ")} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, supportedOS: e.target.value.split(",").map(s => s.trim()) }))} />
+            <Input placeholder="Dependencies (comma-separated)" value={(currentLibrary?.dependencies || []).join(", ")} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, dependencies: e.target.value.split(",").map(s => s.trim()) }))} />
+            <Input placeholder="Used By (comma-separated)" value={(currentLibrary?.usedBy || []).join(", ")} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, usedBy: e.target.value.split(",").map(s => s.trim()) }))} />
+            <Input placeholder="Alternatives (comma-separated)" value={(currentLibrary?.alternatives || []).join(", ")} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, alternatives: e.target.value.split(",").map(s => s.trim()) }))} />
 
-            <Input
-              placeholder="Supported OS (comma-separated)"
-              value={(currentLibrary?.supportedOS || []).join(", ")}
-              onChange={(e) =>
-                setCurrentLibrary(prev => ({
-                  ...prev!,
-                  supportedOS: e.target.value.split(",").map(s => s.trim()),
-                }))
-              }
-            />
-
-            <Input
-              placeholder="Dependencies (comma-separated)"
-              value={(currentLibrary?.dependencies || []).join(", ")}
-              onChange={(e) =>
-                setCurrentLibrary(prev => ({
-                  ...prev!,
-                  dependencies: e.target.value.split(",").map(s => s.trim()),
-                }))
-              }
-            />
-
+            {/* Popularity */}
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                type="number"
-                placeholder="GitHub Stars"
-                value={currentLibrary?.popularity?.stars || ""}
-                onChange={(e) =>
-                  setCurrentLibrary(prev => ({
-                    ...prev!,
-                    popularity: {
-                      ...(prev?.popularity || {}),
-                      stars: parseInt(e.target.value) || 0,
-                    },
-                  }))
-                }
-              />
-
-              <Input
-                type="number"
-                placeholder="Downloads"
-                value={currentLibrary?.popularity?.downloads || ""}
-                onChange={(e) =>
-                  setCurrentLibrary(prev => ({
-                    ...prev!,
-                    popularity: {
-                      ...(prev?.popularity || {}),
-                      downloads: parseInt(e.target.value) || 0,
-                    },
-                  }))
-                }
-              />
+              <Input type="number" placeholder="GitHub Stars" value={currentLibrary?.stars || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, stars: parseInt(e.target.value) || 0 }))} />
+              <Input type="number" placeholder="Downloads" value={currentLibrary?.weeklyDownloads || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, weeklyDownloads: parseInt(e.target.value) || 0 }))} />
             </div>
 
-            <Textarea
-              placeholder="Usage Example"
-              value={currentLibrary?.usageExample || ""}
-              onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, usageExample: e.target.value }))}
-            />
+            {/* Contributors & Dates */}
+            <Input type="number" placeholder="Contributors" value={currentLibrary?.contributors || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, contributors: parseInt(e.target.value) || 0 }))} />
+            <Input placeholder="First Release (e.g. 2022-01-01)" value={currentLibrary?.firstRelease || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, firstRelease: e.target.value }))} />
+            <Input placeholder="Last Update (e.g. 2 weeks ago)" value={currentLibrary?.lastUpdate || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, lastUpdate: e.target.value }))} />
 
-            <Input
-              placeholder="Last Update (e.g. '2 weeks ago')"
-              value={currentLibrary?.lastUpdate || ""}
-              onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, lastUpdate: e.target.value }))}
-            />
+            {/* Bundle */}
+            <Input placeholder="Bundle Size (e.g. 120KB)" value={currentLibrary?.bundle?.size || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, bundle: { ...(prev?.bundle || {}), size: e.target.value } }))} />
+            <Input placeholder="Bundle Gzipped (e.g. 40KB)" value={currentLibrary?.bundle?.gzipped || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, bundle: { ...(prev?.bundle || {}), gzipped: e.target.value } }))} />
 
+            {/* Performance */}
+            <div className="grid grid-cols-3 gap-4">
+              <Input type="number" placeholder="Load Time (ms)" value={currentLibrary?.performance?.loadTime || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, performance: { ...(prev?.performance || {}), loadTime: parseInt(e.target.value) || 0 } }))} />
+              <Input type="number" placeholder="Render Time (ms)" value={currentLibrary?.performance?.renderTime || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, performance: { ...(prev?.performance || {}), renderTime: parseInt(e.target.value) || 0 } }))} />
+              <Input type="number" placeholder="Memory Usage (MB)" value={currentLibrary?.performance?.memoryUsage || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, performance: { ...(prev?.performance || {}), memoryUsage: parseInt(e.target.value) || 0 } }))} />
+            </div>
+
+            {/* Issues & Security */}
+            <div className="grid grid-cols-3 gap-4">
+              <Input type="number" placeholder="Open Issues" value={currentLibrary?.issues?.open || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, issues: { ...(prev?.issues || {}), open: parseInt(e.target.value) || 0 } }))} />
+              <Input type="number" placeholder="Closed Issues" value={currentLibrary?.issues?.closed || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, issues: { ...(prev?.issues || {}), closed: parseInt(e.target.value) || 0 } }))} />
+              <Input type="number" placeholder="Security Issues" value={currentLibrary?.securityIssues || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, securityIssues: parseInt(e.target.value) || 0 }))} />
+            </div>
+
+            {/* Code Quality */}
+            <Input type="number" placeholder="Test Coverage (%)" value={currentLibrary?.testCoverage || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, testCoverage: parseInt(e.target.value) || 0 }))} />
+            <Input type="number" placeholder="Code Maintainability" value={currentLibrary?.codeMaintainability || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, codeMaintainability: parseInt(e.target.value) || 0 }))} />
+            <Input placeholder="Type Support (e.g. Full, Partial, Unknown)" value={currentLibrary?.typeSupport || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, typeSupport: e.target.value }))} />
+            <Input type="number" placeholder="Documentation Score" value={currentLibrary?.documentation || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, documentation: parseInt(e.target.value) || 0 }))} />
+            <Input type="number" placeholder="Community Support Score" value={currentLibrary?.communitySupport || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, communitySupport: parseInt(e.target.value) || 0 }))} />
+
+            {/* Usage Example */}
+            <Textarea placeholder="Usage Example" value={currentLibrary?.usageExample || ""} onChange={(e) => setCurrentLibrary(prev => ({ ...prev!, usageExample: e.target.value }))} />
+
+            {/* Featured Checkbox */}
             <div className="flex items-center space-x-2 pt-2">
-              <Checkbox
-                id="featured"
-                checked={!!currentLibrary?.featured}
-                onCheckedChange={(checked) =>
-                  setCurrentLibrary(prev => ({ ...prev!, featured: !!checked }))
-                }
-              />
+              <Checkbox id="featured" checked={!!currentLibrary?.featured} onCheckedChange={(checked) => setCurrentLibrary(prev => ({ ...prev!, featured: !!checked }))} />
               <Label htmlFor="featured">Feature on Homepage</Label>
             </div>
           </div>
+
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

@@ -1,27 +1,30 @@
-
 import React, { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { 
+import {
   ArrowLeft, Star, Download, Clock, Package, Shield,
   Box, Code, GitBranch, RefreshCw, XCircle, Search,
   Bookmark, FileCheck, Thermometer, CheckCircle2, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  Select, 
-  SelectContent, 
-  SelectGroup, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { fetchAllLibraries } from "@/services/libraryService";
+import { fetchAllLibraries, fetchLibraryById } from "@/services/libraryService";
+import html2pdf from "html2pdf.js";
+import { useRef } from "react";
+
+
 
 // // Mock data
 // const librariesData = {
@@ -275,85 +278,121 @@ import { fetchAllLibraries } from "@/services/libraryService";
 //   },
 // };
 
-
-
 const categories = ["Frontend Framework", "State Management", "Data Fetching", "UI Components", "CSS Framework"];
 
 const ComparisonPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [libraries, setLibraries] = useState<string[]>([]);
   const [selectedLibrary1, setSelectedLibrary1] = useState<string | null>(null);
   const [selectedLibrary2, setSelectedLibrary2] = useState<string | null>(null);
-  const [librariesByCategory, setLibrariesByCategory] = useState<{[key: string]: any[]}>({});
+  const [selectedLibData1, setSelectedLibData1] = useState<any | null>(null); // ✅ Added
+  const [selectedLibData2, setSelectedLibData2] = useState<any | null>(null); // ✅ Added
+  const [loading, setLoading] = useState<boolean>(false); // ✅ Added
+  const [librariesByCategory, setLibrariesByCategory] = useState<{ [key: string]: any[] }>({});
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [isComparing, setIsComparing] = useState(false);
+
+
+
   const { toast } = useToast();
 
+  const comparisonRef = useRef<HTMLDivElement>(null);
+
+  const exportComparisonReport = (lib1: any, lib2: any) => {
+    const reportData = {
+      generatedAt: new Date().toISOString(),
+      comparisonBetween: [lib1.name, lib2.name],
+      libraries: [lib1, lib2],
+    };
+
+    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `library_comparison_${lib1.name}_vs_${lib2.name}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
 
   useEffect(() => {
     const loadAll = async () => {
-      const all = await fetchAllLibraries();
-      const byCategory: { [key: string]: any[] } = { All: [] };
-      all.forEach((library: any) => {
-        if (!byCategory[library.category]) byCategory[library.category] = [];
-        byCategory[library.category].push(library);
-        byCategory["All"].push(library);
-      });
-      setLibrariesByCategory(byCategory);
-      setLibraries(all.map((lib: any) => lib.id));
-  
-      const lib1 = searchParams.get("lib1");
-      const lib2 = searchParams.get("lib2");
-      const lib = searchParams.get("lib");
-  
-      if (lib1) setSelectedLibrary1(lib1);
-      if (lib2) setSelectedLibrary2(lib2);
-      if (lib && !lib1 && !lib2) setSelectedLibrary1(lib);
-      if ((lib1 && lib2) || (lib1 && selectedLibrary2) || (lib2 && selectedLibrary1)) {
-        setIsComparing(true);
+      try {
+        const all = await fetchAllLibraries();
+        const byCategory: { [key: string]: any[] } = { All: [] };
+        all.forEach((library: any) => {
+          if (!byCategory[library.category]) byCategory[library.category] = [];
+          byCategory[library.category].push(library);
+          byCategory["All"].push(library);
+        });
+        setLibrariesByCategory(byCategory);
+
+        const lib1 = searchParams.get("lib1");
+        const lib2 = searchParams.get("lib2");
+        const lib = searchParams.get("lib");
+
+        if (lib1) setSelectedLibrary1(lib1);
+        if (lib2) setSelectedLibrary2(lib2);
+        if (lib && !lib1 && !lib2) setSelectedLibrary1(lib);
+        if ((lib1 && lib2) || (lib1 && selectedLibrary2) || (lib2 && selectedLibrary1)) {
+          setIsComparing(true);
+        }
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch libraries list.",
+          variant: "destructive",
+        });
       }
     };
-  
+
     loadAll();
   }, [searchParams]);
 
-  // Parse URL parameters
   useEffect(() => {
-    const lib1 = searchParams.get("lib1");
-    const lib2 = searchParams.get("lib2");
-    const lib = searchParams.get("lib");
-    
-    // Organize libraries by category
-    const byCategory: {[key: string]: any[]} = {
-      "All": []
-    };
-    
-    Object.values(librariesData).forEach(library => {
-      if (!byCategory[library.category]) {
-        byCategory[library.category] = [];
+    const fetchLib1 = async () => {
+      if (selectedLibrary1) {
+        try {
+          const data = await fetchLibraryById(selectedLibrary1);
+          setSelectedLibData1(data);
+        } catch (err) {
+          setSelectedLibData1(null);
+          toast({ title: "Error", description: "Failed to load first library", variant: "destructive" });
+        }
+      } else {
+        setSelectedLibData1(null);
       }
-      byCategory[library.category].push(library);
-      byCategory["All"].push(library);
-    });
-    
-    setLibrariesByCategory(byCategory);
-    setLibraries(Object.keys(librariesData));
-    
-    // Set initial selections based on URL params
-    if (lib1) setSelectedLibrary1(lib1);
-    if (lib2) setSelectedLibrary2(lib2);
-    if (lib && !lib1 && !lib2) setSelectedLibrary1(lib);
-    
-    // If both libraries are selected, show comparison
-    if ((lib1 && lib2) || (lib1 && selectedLibrary2) || (lib2 && selectedLibrary1)) {
-      setIsComparing(true);
-    }
-  }, [searchParams]);
+    };
+    fetchLib1();
+  }, [selectedLibrary1]);
+
+  useEffect(() => {
+    const fetchLib2 = async () => {
+      if (selectedLibrary2) {
+        try {
+          const data = await fetchLibraryById(selectedLibrary2);
+          setSelectedLibData2(data);
+        } catch (err) {
+          setSelectedLibData2(null);
+          toast({ title: "Error", description: "Failed to load second library", variant: "destructive" });
+        }
+      } else {
+        setSelectedLibData2(null);
+      }
+    };
+    fetchLib2();
+  }, [selectedLibrary2]);
+
 
   const handleCompare = () => {
     if (selectedLibrary1 && selectedLibrary2) {
-      // Update URL with selected libraries
+      if (selectedLibrary1 === selectedLibrary2) {
+        toast({
+          title: "Duplicate Selection",
+          description: "Please select two different libraries to compare.",
+          variant: "destructive",
+        });
+        return;
+      }
       setSearchParams({ lib1: selectedLibrary1, lib2: selectedLibrary2 });
       setIsComparing(true);
     } else {
@@ -372,31 +411,25 @@ const ComparisonPage = () => {
     setSearchParams({});
   };
 
-  const getLibraryById = (id: string | null) => {
-    if (!id) return null;
-    return librariesData[id as keyof typeof librariesData] || null;
-  };
-
-  const lib1 = getLibraryById(selectedLibrary1);
-  const lib2 = getLibraryById(selectedLibrary2);
-
   return (
     <div className="min-h-screen py-10 px-6">
       <div className="max-w-7xl mx-auto">
         {/* Back button */}
         <div className="mb-6">
-          <Button 
-            variant="ghost" 
-            asChild 
+          <Button
+            variant="ghost"
+            asChild
             className="gap-2 hover:bg-white/5"
           >
-            <Link to="/dashboard">
+            <Link to={selectedLibrary1 ? `/library/${selectedLibrary1}` : "/search"}>
               <ArrowLeft size={16} />
-              Back to Dashboard
+              {selectedLibrary1 ? "Back to Library Details" : "Back to Search"}
             </Link>
           </Button>
+
+
         </div>
-        
+
         {/* Page header */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
@@ -411,7 +444,7 @@ const ComparisonPage = () => {
             Compare libraries side by side to find the best fit for your project
           </p>
         </motion.section>
-        
+
         {/* Selection section */}
         {!isComparing && (
           <motion.section
@@ -425,13 +458,13 @@ const ComparisonPage = () => {
                 {/* Library 1 selection */}
                 <div>
                   <h2 className="text-xl font-display font-medium mb-4">First Library</h2>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">
                         Category
                       </label>
-                      <Select 
+                      <Select
                         value={selectedCategory}
                         onValueChange={(value) => setSelectedCategory(value)}
                       >
@@ -450,19 +483,15 @@ const ComparisonPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div>
                       <label className="text-sm font-medium mb-2 block">
                         Select Library
                       </label>
-                      <Select 
-                        value={selectedLibrary1 || ""}
+                      <Select
+                        value={selectedLibrary1 || undefined}
                         onValueChange={(value) => {
                           setSelectedLibrary1(value);
-                          // If the same library is selected for both, clear lib2
-                          if (value === selectedLibrary2) {
-                            setSelectedLibrary2(null);
-                          }
                         }}
                       >
                         <SelectTrigger>
@@ -471,7 +500,7 @@ const ComparisonPage = () => {
                         <SelectContent>
                           <SelectGroup>
                             {librariesByCategory[selectedCategory]?.map(lib => (
-                              <SelectItem key={lib.id} value={lib.id}>
+                              <SelectItem key={lib._id} value={lib._id}>
                                 {lib.name}
                               </SelectItem>
                             ))}
@@ -479,43 +508,43 @@ const ComparisonPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     {selectedLibrary1 && (
                       <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-medium">{lib1?.name}</h3>
+                          <h3 className="font-medium">{selectedLibData1?.name}</h3>
                           <span className="px-2 py-0.5 text-xs rounded-full bg-white/10">
-                            {lib1?.category}
+                            {selectedLibData1?.category}
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground mb-3">
-                          {lib1?.description}
+                          {selectedLibData1?.description}
                         </p>
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-1 text-amber-400">
                             <Star size={16} className="fill-amber-400" />
-                            <span>{lib1?.stars.toLocaleString()}</span>
+                            <span>{selectedLibData1?.stars.toLocaleString()}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock size={16} className="text-muted-foreground" />
-                            <span>{lib1?.lastUpdate}</span>
+                            <span>{selectedLibData1?.lastUpdate}</span>
                           </div>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
-                
+
                 {/* Library 2 selection */}
                 <div>
                   <h2 className="text-xl font-display font-medium mb-4">Second Library</h2>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">
                         Category
                       </label>
-                      <Select 
+                      <Select
                         value={selectedCategory}
                         onValueChange={(value) => setSelectedCategory(value)}
                       >
@@ -534,19 +563,15 @@ const ComparisonPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div>
                       <label className="text-sm font-medium mb-2 block">
                         Select Library
                       </label>
-                      <Select 
-                        value={selectedLibrary2 || ""}
+                      <Select
+                        value={selectedLibrary2 || undefined}
                         onValueChange={(value) => {
                           setSelectedLibrary2(value);
-                          // If the same library is selected for both, clear lib1
-                          if (value === selectedLibrary1) {
-                            setSelectedLibrary1(null);
-                          }
                         }}
                       >
                         <SelectTrigger>
@@ -555,7 +580,7 @@ const ComparisonPage = () => {
                         <SelectContent>
                           <SelectGroup>
                             {librariesByCategory[selectedCategory]?.map(lib => (
-                              <SelectItem key={lib.id} value={lib.id}>
+                              <SelectItem key={lib._id} value={lib._id}>
                                 {lib.name}
                               </SelectItem>
                             ))}
@@ -563,26 +588,26 @@ const ComparisonPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     {selectedLibrary2 && (
                       <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-medium">{lib2?.name}</h3>
+                          <h3 className="font-medium">{selectedLibData2?.name}</h3>
                           <span className="px-2 py-0.5 text-xs rounded-full bg-white/10">
-                            {lib2?.category}
+                            {selectedLibData2?.category}
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground mb-3">
-                          {lib2?.description}
+                          {selectedLibData2?.description}
                         </p>
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-1 text-amber-400">
                             <Star size={16} className="fill-amber-400" />
-                            <span>{lib2?.stars.toLocaleString()}</span>
+                            <span>{selectedLibData2?.stars.toLocaleString()}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock size={16} className="text-muted-foreground" />
-                            <span>{lib2?.lastUpdate}</span>
+                            <span>{selectedLibData2?.lastUpdate}</span>
                           </div>
                         </div>
                       </div>
@@ -590,9 +615,9 @@ const ComparisonPage = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-center mt-8 gap-4">
-                <Button 
+                <Button
                   onClick={handleCompare}
                   disabled={!selectedLibrary1 || !selectedLibrary2}
                   className="gap-2"
@@ -600,9 +625,9 @@ const ComparisonPage = () => {
                   <Scale size={16} />
                   Compare Libraries
                 </Button>
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   onClick={handleClear}
                   className="gap-2"
                 >
@@ -613,10 +638,11 @@ const ComparisonPage = () => {
             </Card>
           </motion.section>
         )}
-        
+
         {/* Comparison section */}
-        {isComparing && lib1 && lib2 && (
+        {isComparing && selectedLibData1 && selectedLibData2 && (
           <motion.section
+            ref={comparisonRef}  // <- ✨ Add this here
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
@@ -624,83 +650,101 @@ const ComparisonPage = () => {
           >
             {/* Action buttons */}
             <div className="flex justify-end gap-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleClear}
                 className="gap-2"
               >
                 <XCircle size={16} />
                 Clear Comparison
               </Button>
-              
-              <Button 
+
+              <Button
                 onClick={() => {
-                  // Take a screenshot or generate a report in a real app
-                  toast({
-                    title: "Report Generated",
-                    description: "Comparison report has been downloaded.",
-                  });
+                  if (comparisonRef.current) {
+                    const opt = {
+                      margin: 0.5,
+                      filename: `Library_Comparison_${selectedLibData1.name}_vs_${selectedLibData2.name}.pdf`,
+                      image: { type: 'jpeg', quality: 0.98 },
+                      html2canvas: { scale: 2 },
+                      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                    };
+
+                    html2pdf().from(comparisonRef.current).set(opt).save();
+
+                    toast({
+                      title: "Report Generated",
+                      description: "Comparison PDF has been downloaded.",
+                    });
+                  } else {
+                    toast({
+                      title: "Export Failed",
+                      description: "Could not find comparison section.",
+                      variant: "destructive",
+                    });
+                  }
                 }}
                 className="gap-2"
               >
                 <Download size={16} />
                 Export Comparison
               </Button>
+
             </div>
-            
+
             {/* Header cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="glass-card relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 pointer-events-none"></div>
                 <CardContent className="p-6 relative z-10">
-                  <h2 className="text-2xl font-display font-bold mb-2">{lib1.name}</h2>
-                  <p className="text-muted-foreground mb-4">{lib1.description}</p>
+                  <h2 className="text-2xl font-display font-bold mb-2">{selectedLibData1.name}</h2>
+                  <p className="text-muted-foreground mb-4">{selectedLibData1.description}</p>
                   <div className="flex flex-wrap gap-4">
                     <div className="flex items-center gap-1 text-amber-400">
                       <Star size={18} className="fill-amber-400" />
-                      <span>{lib1.stars.toLocaleString()}</span>
+                      <span>{selectedLibData1.stars.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Package size={18} className="text-muted-foreground" />
-                      <span>v{lib1.version}</span>
+                      <span>v{selectedLibData1.version}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Download size={18} className="text-muted-foreground" />
-                      <span>{(lib1.weeklyDownloads / 1000000).toFixed(1)}M weekly</span>
+                      <span>{(selectedLibData1.weeklyDownloads / 1000000).toFixed(1)}M weekly</span>
                     </div>
                   </div>
                   <div className="mt-4">
                     <Button asChild variant="outline" size="sm" className="gap-1">
-                      <Link to={`/library/${lib1.id}`}>
+                      <Link to={`/library/${selectedLibData1._id}`}>
                         View Details
                       </Link>
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card className="glass-card relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-green-500/5 pointer-events-none"></div>
                 <CardContent className="p-6 relative z-10">
-                  <h2 className="text-2xl font-display font-bold mb-2">{lib2.name}</h2>
-                  <p className="text-muted-foreground mb-4">{lib2.description}</p>
+                  <h2 className="text-2xl font-display font-bold mb-2">{selectedLibData2.name}</h2>
+                  <p className="text-muted-foreground mb-4">{selectedLibData2.description}</p>
                   <div className="flex flex-wrap gap-4">
                     <div className="flex items-center gap-1 text-amber-400">
                       <Star size={18} className="fill-amber-400" />
-                      <span>{lib2.stars.toLocaleString()}</span>
+                      <span>{selectedLibData2.stars.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Package size={18} className="text-muted-foreground" />
-                      <span>v{lib2.version}</span>
+                      <span>v{selectedLibData2.version}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Download size={18} className="text-muted-foreground" />
-                      <span>{(lib2.weeklyDownloads / 1000000).toFixed(1)}M weekly</span>
+                      <span>{(selectedLibData2.weeklyDownloads / 1000000).toFixed(1)}M weekly</span>
                     </div>
                   </div>
                   <div className="mt-4">
                     <Button asChild variant="outline" size="sm" className="gap-1">
-                      <Link to={`/library/${lib2.id}`}>
+                      <Link to={`/library/${selectedLibData2._id}`}>
                         View Details
                       </Link>
                     </Button>
@@ -708,111 +752,111 @@ const ComparisonPage = () => {
                 </CardContent>
               </Card>
             </div>
-            
+
             {/* Performance Comparison */}
             <Card className="glass-card">
               <CardContent className="p-6">
                 <h2 className="text-xl font-display font-medium mb-6">Performance Comparison</h2>
-                
+
                 <div className="space-y-8">
                   {/* Load Time */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="font-medium">Load Time</h3>
                       <div className="flex items-center gap-4">
-                        <span className={`text-${getPerformanceColor(lib1.performance.loadTime)}`}>
-                          {lib1.name}: {lib1.performance.loadTime}/100
+                        <span className={`text-${getPerformanceColor(selectedLibData1.performance.loadTime)}`}>
+                          {selectedLibData1.name}: {selectedLibData1.performance.loadTime}/100
                         </span>
-                        <span className={`text-${getPerformanceColor(lib2.performance.loadTime)}`}>
-                          {lib2.name}: {lib2.performance.loadTime}/100
+                        <span className={`text-${getPerformanceColor(selectedLibData2.performance.loadTime)}`}>
+                          {selectedLibData2.name}: {selectedLibData2.performance.loadTime}/100
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="h-8 bg-white/5 rounded-lg overflow-hidden relative">
-                      <div 
+                      <div
                         className="h-full bg-blue-500/70 absolute left-0 top-0 transition-all duration-1000 ease-out"
-                        style={{ width: `${lib1.performance.loadTime}%` }}
+                        style={{ width: `${selectedLibData1.performance.loadTime}%` }}
                       ></div>
-                      <div 
+                      <div
                         className="h-full bg-emerald-500/70 absolute left-0 top-0 transition-all duration-1000 ease-out"
-                        style={{ width: `${lib2.performance.loadTime}%`, transform: 'translateY(100%)' }}
+                        style={{ width: `${selectedLibData2.performance.loadTime}%`, transform: 'translateY(100%)' }}
                       ></div>
-                      
+
                       {/* Winner indicator */}
-                      {lib1.performance.loadTime !== lib2.performance.loadTime && (
-                        <div 
-                          className={`absolute ${lib1.performance.loadTime > lib2.performance.loadTime ? 'left-1' : 'right-1'} top-1 bg-white/10 rounded-full p-1`}
+                      {selectedLibData1.performance.loadTime !== selectedLibData2.performance.loadTime && (
+                        <div
+                          className={`absolute ${selectedLibData1.performance.loadTime > selectedLibData2.performance.loadTime ? 'left-1' : 'right-1'} top-1 bg-white/10 rounded-full p-1`}
                         >
                           <CheckCircle2 size={14} className="text-green-400" />
                         </div>
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Render Time */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="font-medium">Render Time</h3>
                       <div className="flex items-center gap-4">
-                        <span className={`text-${getPerformanceColor(lib1.performance.renderTime)}`}>
-                          {lib1.name}: {lib1.performance.renderTime}/100
+                        <span className={`text-${getPerformanceColor(selectedLibData1.performance.renderTime)}`}>
+                          {selectedLibData1.name}: {selectedLibData1.performance.renderTime}/100
                         </span>
-                        <span className={`text-${getPerformanceColor(lib2.performance.renderTime)}`}>
-                          {lib2.name}: {lib2.performance.renderTime}/100
+                        <span className={`text-${getPerformanceColor(selectedLibData2.performance.renderTime)}`}>
+                          {selectedLibData2.name}: {selectedLibData2.performance.renderTime}/100
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="h-8 bg-white/5 rounded-lg overflow-hidden relative">
-                      <div 
+                      <div
                         className="h-full bg-blue-500/70 absolute left-0 top-0 transition-all duration-1000 ease-out"
-                        style={{ width: `${lib1.performance.renderTime}%` }}
+                        style={{ width: `${selectedLibData1.performance.renderTime}%` }}
                       ></div>
-                      <div 
+                      <div
                         className="h-full bg-emerald-500/70 absolute left-0 top-0 transition-all duration-1000 ease-out"
-                        style={{ width: `${lib2.performance.renderTime}%`, transform: 'translateY(100%)' }}
+                        style={{ width: `${selectedLibData2.performance.renderTime}%`, transform: 'translateY(100%)' }}
                       ></div>
-                      
+
                       {/* Winner indicator */}
-                      {lib1.performance.renderTime !== lib2.performance.renderTime && (
-                        <div 
-                          className={`absolute ${lib1.performance.renderTime > lib2.performance.renderTime ? 'left-1' : 'right-1'} top-1 bg-white/10 rounded-full p-1`}
+                      {selectedLibData1.performance.renderTime !== selectedLibData2.performance.renderTime && (
+                        <div
+                          className={`absolute ${selectedLibData1.performance.renderTime > selectedLibData2.performance.renderTime ? 'left-1' : 'right-1'} top-1 bg-white/10 rounded-full p-1`}
                         >
                           <CheckCircle2 size={14} className="text-green-400" />
                         </div>
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Memory Usage */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="font-medium">Memory Usage</h3>
                       <div className="flex items-center gap-4">
-                        <span className={`text-${getPerformanceColor(lib1.performance.memoryUsage)}`}>
-                          {lib1.name}: {lib1.performance.memoryUsage}/100
+                        <span className={`text-${getPerformanceColor(selectedLibData1.performance.memoryUsage)}`}>
+                          {selectedLibData1.name}: {selectedLibData1.performance.memoryUsage}/100
                         </span>
-                        <span className={`text-${getPerformanceColor(lib2.performance.memoryUsage)}`}>
-                          {lib2.name}: {lib2.performance.memoryUsage}/100
+                        <span className={`text-${getPerformanceColor(selectedLibData2.performance.memoryUsage)}`}>
+                          {selectedLibData2.name}: {selectedLibData2.performance.memoryUsage}/100
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="h-8 bg-white/5 rounded-lg overflow-hidden relative">
-                      <div 
+                      <div
                         className="h-full bg-blue-500/70 absolute left-0 top-0 transition-all duration-1000 ease-out"
-                        style={{ width: `${lib1.performance.memoryUsage}%` }}
+                        style={{ width: `${selectedLibData1.performance.memoryUsage}%` }}
                       ></div>
-                      <div 
+                      <div
                         className="h-full bg-emerald-500/70 absolute left-0 top-0 transition-all duration-1000 ease-out"
-                        style={{ width: `${lib2.performance.memoryUsage}%`, transform: 'translateY(100%)' }}
+                        style={{ width: `${selectedLibData2.performance.memoryUsage}%`, transform: 'translateY(100%)' }}
                       ></div>
-                      
+
                       {/* Winner indicator */}
-                      {lib1.performance.memoryUsage !== lib2.performance.memoryUsage && (
-                        <div 
-                          className={`absolute ${lib1.performance.memoryUsage > lib2.performance.memoryUsage ? 'left-1' : 'right-1'} top-1 bg-white/10 rounded-full p-1`}
+                      {selectedLibData1.performance.memoryUsage !== selectedLibData2.performance.memoryUsage && (
+                        <div
+                          className={`absolute ${selectedLibData1.performance.memoryUsage > selectedLibData2.performance.memoryUsage ? 'left-1' : 'right-1'} top-1 bg-white/10 rounded-full p-1`}
                         >
                           <CheckCircle2 size={14} className="text-green-400" />
                         </div>
@@ -820,21 +864,21 @@ const ComparisonPage = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mt-6 pt-6 border-t border-white/10">
                   <div className="flex items-center gap-2 text-sm">
                     <div className="w-3 h-3 rounded-full bg-blue-500/70"></div>
-                    <span>{lib1.name}</span>
-                    
+                    <span>{selectedLibData1.name}</span>
+
                     <div className="w-3 h-3 rounded-full bg-emerald-500/70 ml-4"></div>
-                    <span>{lib2.name}</span>
-                    
+                    <span>{selectedLibData2.name}</span>
+
                     <div className="ml-auto text-muted-foreground">Higher is better</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+
             {/* Size Comparison */}
             <Card className="glass-card overflow-hidden">
               <CardContent className="p-0">
@@ -846,22 +890,22 @@ const ComparisonPage = () => {
                         <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
                           <Box size={20} className="text-blue-400" />
                         </div>
-                        <h3 className="font-medium">{lib1.name} Bundle Size</h3>
+                        <h3 className="font-medium">{selectedLibData1.name} Bundle Size</h3>
                       </div>
-                      
+
                       <div className="text-center my-8">
                         <div className="text-4xl font-display font-bold text-blue-400">
-                          {lib1.bundle.gzipped}
+                          {selectedLibData1.bundle.gzipped}
                         </div>
                         <p className="text-muted-foreground mt-2">Gzipped</p>
                       </div>
-                      
+
                       <div className="text-sm text-muted-foreground">
-                        <p>Minified: {lib1.bundle.size}</p>
+                        <p>Minified: {selectedLibData1.bundle.size}</p>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="p-6 relative border-t md:border-t-0 md:border-l border-white/10">
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none"></div>
                     <div className="relative z-10">
@@ -869,68 +913,68 @@ const ComparisonPage = () => {
                         <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
                           <Box size={20} className="text-emerald-400" />
                         </div>
-                        <h3 className="font-medium">{lib2.name} Bundle Size</h3>
+                        <h3 className="font-medium">{selectedLibData2.name} Bundle Size</h3>
                       </div>
-                      
+
                       <div className="text-center my-8">
                         <div className="text-4xl font-display font-bold text-emerald-400">
-                          {lib2.bundle.gzipped}
+                          {selectedLibData2.bundle.gzipped}
                         </div>
                         <p className="text-muted-foreground mt-2">Gzipped</p>
                       </div>
-                      
+
                       <div className="text-sm text-muted-foreground">
-                        <p>Minified: {lib2.bundle.size}</p>
+                        <p>Minified: {selectedLibData2.bundle.size}</p>
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="p-6 border-t border-white/10">
                   <h3 className="font-medium mb-4">Size Comparison</h3>
-                  
+
                   <div className="relative h-10 bg-white/5 rounded-lg overflow-hidden">
                     {/* Size visualization - make it proportional */}
-                    <div 
+                    <div
                       className="h-full bg-blue-500/70 absolute left-0 top-0"
-                      style={{ 
-                        width: `${getSizePercentage(lib1.bundle.gzipped)}%`
+                      style={{
+                        width: `${getSizePercentage(selectedLibData1.bundle.gzipped)}%`
                       }}
                     ></div>
-                    <div 
+                    <div
                       className="h-full bg-emerald-500/70 absolute left-0 top-0"
-                      style={{ 
-                        width: `${getSizePercentage(lib2.bundle.gzipped)}%`,
+                      style={{
+                        width: `${getSizePercentage(selectedLibData2.bundle.gzipped)}%`,
                         transform: 'translateY(50%)',
                         height: '50%'
                       }}
                     ></div>
-                    
+
                     {/* Labels */}
-                    <div 
+                    <div
                       className="absolute left-0 top-0 px-2 flex items-center h-full text-xs font-medium"
                       style={{
                         left: `${Math.min(
-                          Math.max(getSizePercentage(lib1.bundle.gzipped) - 15, 0),
+                          Math.max(getSizePercentage(selectedLibData1.bundle.gzipped) - 15, 0),
                           85
                         )}%`
                       }}
                     >
-                      {lib1.name}
+                      {selectedLibData1.name}
                     </div>
-                    <div 
+                    <div
                       className="absolute left-0 bottom-0 px-2 flex items-center h-1/2 text-xs font-medium"
                       style={{
                         left: `${Math.min(
-                          Math.max(getSizePercentage(lib2.bundle.gzipped) - 15, 0),
+                          Math.max(getSizePercentage(selectedLibData2.bundle.gzipped) - 15, 0),
                           85
                         )}%`
                       }}
                     >
-                      {lib2.name}
+                      {selectedLibData2.name}
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-between text-sm text-muted-foreground mt-2">
                     <span>0 kB</span>
                     <span>10 kB</span>
@@ -938,110 +982,110 @@ const ComparisonPage = () => {
                     <span>30 kB</span>
                     <span>40+ kB</span>
                   </div>
-                  
+
                   <p className="text-sm text-muted-foreground mt-4">
-                    {getComparativeSize(lib1.bundle.gzipped, lib2.bundle.gzipped)}
+                    {getComparativeSize(selectedLibData1.bundle.gzipped, selectedLibData2.bundle.gzipped)}
                   </p>
                 </div>
               </CardContent>
             </Card>
-            
+
             {/* Feature Comparison */}
             <Card className="glass-card">
               <CardContent className="p-6">
                 <h2 className="text-xl font-display font-medium mb-6">Feature Comparison</h2>
-                
+
                 <ScrollArea className="h-[400px]">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-white/10">
                         <th className="text-left pb-4 font-medium">Feature</th>
-                        <th className="text-center pb-4 font-medium text-blue-400">{lib1.name}</th>
-                        <th className="text-center pb-4 font-medium text-emerald-400">{lib2.name}</th>
+                        <th className="text-center pb-4 font-medium text-blue-400">{selectedLibData1.name}</th>
+                        <th className="text-center pb-4 font-medium text-emerald-400">{selectedLibData2.name}</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-b border-white/5">
                         <td className="py-4">License</td>
-                        <td className="py-4 text-center">{lib1.license}</td>
-                        <td className="py-4 text-center">{lib2.license}</td>
+                        <td className="py-4 text-center">{selectedLibData1.license}</td>
+                        <td className="py-4 text-center">{selectedLibData2.license}</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <td className="py-4">GitHub Stars</td>
-                        <td className="py-4 text-center">{lib1.stars.toLocaleString()}</td>
-                        <td className="py-4 text-center">{lib2.stars.toLocaleString()}</td>
+                        <td className="py-4 text-center">{selectedLibData1.stars.toLocaleString()}</td>
+                        <td className="py-4 text-center">{selectedLibData2.stars.toLocaleString()}</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <td className="py-4">Weekly Downloads</td>
-                        <td className="py-4 text-center">{(lib1.weeklyDownloads / 1000000).toFixed(1)}M</td>
-                        <td className="py-4 text-center">{(lib2.weeklyDownloads / 1000000).toFixed(1)}M</td>
+                        <td className="py-4 text-center">{(selectedLibData1.weeklyDownloads / 1000000).toFixed(1)}M</td>
+                        <td className="py-4 text-center">{(selectedLibData2.weeklyDownloads / 1000000).toFixed(1)}M</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <td className="py-4">First Released</td>
-                        <td className="py-4 text-center">{lib1.firstRelease}</td>
-                        <td className="py-4 text-center">{lib2.firstRelease}</td>
+                        <td className="py-4 text-center">{selectedLibData1.firstRelease}</td>
+                        <td className="py-4 text-center">{selectedLibData2.firstRelease}</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <td className="py-4">Current Version</td>
-                        <td className="py-4 text-center">v{lib1.version}</td>
-                        <td className="py-4 text-center">v{lib2.version}</td>
+                        <td className="py-4 text-center">v{selectedLibData1.version}</td>
+                        <td className="py-4 text-center">v{selectedLibData2.version}</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <td className="py-4">Last Updated</td>
-                        <td className="py-4 text-center">{lib1.lastUpdate}</td>
-                        <td className="py-4 text-center">{lib2.lastUpdate}</td>
+                        <td className="py-4 text-center">{selectedLibData1.lastUpdate}</td>
+                        <td className="py-4 text-center">{selectedLibData2.lastUpdate}</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <td className="py-4">Contributors</td>
-                        <td className="py-4 text-center">{lib1.contributors}</td>
-                        <td className="py-4 text-center">{lib2.contributors}</td>
+                        <td className="py-4 text-center">{selectedLibData1.contributors}</td>
+                        <td className="py-4 text-center">{selectedLibData2.contributors}</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <td className="py-4">Dependencies</td>
-                        <td className="py-4 text-center">{lib1.dependencies.length}</td>
-                        <td className="py-4 text-center">{lib2.dependencies.length}</td>
+                        <td className="py-4 text-center">{selectedLibData1.dependencies.length}</td>
+                        <td className="py-4 text-center">{selectedLibData2.dependencies.length}</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <td className="py-4">TypeScript Support</td>
-                        <td className="py-4 text-center">{lib1.typeSupport}</td>
-                        <td className="py-4 text-center">{lib2.typeSupport}</td>
+                        <td className="py-4 text-center">{selectedLibData1.typeSupport}</td>
+                        <td className="py-4 text-center">{selectedLibData2.typeSupport}</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <td className="py-4">Code Maintainability</td>
-                        <td className="py-4 text-center">{lib1.codeMaintainability}/100</td>
-                        <td className="py-4 text-center">{lib2.codeMaintainability}/100</td>
+                        <td className="py-4 text-center">{selectedLibData1.codeMaintainability}/100</td>
+                        <td className="py-4 text-center">{selectedLibData2.codeMaintainability}/100</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <td className="py-4">Documentation Quality</td>
-                        <td className="py-4 text-center">{lib1.documentation}/100</td>
-                        <td className="py-4 text-center">{lib2.documentation}/100</td>
+                        <td className="py-4 text-center">{selectedLibData1.documentation}/100</td>
+                        <td className="py-4 text-center">{selectedLibData2.documentation}/100</td>
                       </tr>
                       <tr className="border-b border-white/5">
                         <td className="py-4">Community Support</td>
-                        <td className="py-4 text-center">{lib1.communitySupport}/100</td>
-                        <td className="py-4 text-center">{lib2.communitySupport}/100</td>
+                        <td className="py-4 text-center">{selectedLibData1.communitySupport}/100</td>
+                        <td className="py-4 text-center">{selectedLibData2.communitySupport}/100</td>
                       </tr>
                       <tr>
                         <td className="py-4">Security Issues</td>
                         <td className="py-4 text-center">
-                          {lib1.securityIssues === 0 ? (
+                          {selectedLibData1.securityIssues === 0 ? (
                             <span className="inline-flex items-center text-green-400">
                               <Shield size={16} className="mr-1" /> None
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-red-400">
-                              <AlertCircle size={16} className="mr-1" /> {lib1.securityIssues}
+                              <AlertCircle size={16} className="mr-1" /> {selectedLibData1.securityIssues}
                             </span>
                           )}
                         </td>
                         <td className="py-4 text-center">
-                          {lib2.securityIssues === 0 ? (
+                          {selectedLibData2.securityIssues === 0 ? (
                             <span className="inline-flex items-center text-green-400">
                               <Shield size={16} className="mr-1" /> None
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-red-400">
-                              <AlertCircle size={16} className="mr-1" /> {lib2.securityIssues}
+                              <AlertCircle size={16} className="mr-1" /> {selectedLibData2.securityIssues}
                             </span>
                           )}
                         </td>
@@ -1051,17 +1095,17 @@ const ComparisonPage = () => {
                 </ScrollArea>
               </CardContent>
             </Card>
-            
+
             {/* Summary */}
             <Card className="glass-card">
               <CardContent className="p-6">
                 <h2 className="text-xl font-display font-medium mb-6">Comparison Summary</h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <h3 className="font-medium mb-4 text-blue-400">{lib1.name} Strengths</h3>
+                    <h3 className="font-medium mb-4 text-blue-400">{selectedLibData1.name} Strengths</h3>
                     <ul className="space-y-2">
-                      {getLibraryStrengths(lib1, lib2).map((strength, index) => (
+                      {getLibraryStrengths(selectedLibData1, selectedLibData2).map((strength, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <CheckCircle2 size={18} className="text-blue-400 mt-0.5" />
                           <span>{strength}</span>
@@ -1069,11 +1113,11 @@ const ComparisonPage = () => {
                       ))}
                     </ul>
                   </div>
-                  
+
                   <div>
-                    <h3 className="font-medium mb-4 text-emerald-400">{lib2.name} Strengths</h3>
+                    <h3 className="font-medium mb-4 text-emerald-400">{selectedLibData2.name} Strengths</h3>
                     <ul className="space-y-2">
-                      {getLibraryStrengths(lib2, lib1).map((strength, index) => (
+                      {getLibraryStrengths(selectedLibData2, selectedLibData1).map((strength, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <CheckCircle2 size={18} className="text-emerald-400 mt-0.5" />
                           <span>{strength}</span>
@@ -1082,20 +1126,20 @@ const ComparisonPage = () => {
                     </ul>
                   </div>
                 </div>
-                
+
                 <Separator className="my-6 bg-white/10" />
-                
+
                 <div>
                   <h3 className="font-medium mb-4">Recommendation</h3>
                   <p className="text-muted-foreground">
-                    {getRecommendation(lib1, lib2)}
+                    {getRecommendation(selectedLibData1, selectedLibData2)}
                   </p>
                 </div>
               </CardContent>
             </Card>
           </motion.section>
         )}
-        
+
         {/* Select libraries */}
         {(!selectedLibrary1 || !selectedLibrary2) && !isComparing && (
           <motion.section
@@ -1109,13 +1153,13 @@ const ComparisonPage = () => {
                   <Scale size={40} className="text-accent" />
                 </div>
               </div>
-              
+
               <h2 className="text-2xl font-display font-bold mb-3">Compare Libraries</h2>
               <p className="text-muted-foreground mb-6">
                 Select two libraries to compare their features, performance, bundle size, and more to help you choose the best tool for your project.
               </p>
-              
-              <Button 
+
+              <Button
                 asChild
                 className="gap-2"
               >
@@ -1149,7 +1193,7 @@ const getSizePercentage = (size: string) => {
 const getComparativeSize = (size1: string, size2: string) => {
   const size1Number = parseFloat(size1.replace(" kB", ""));
   const size2Number = parseFloat(size2.replace(" kB", ""));
-  
+
   if (size1Number < size2Number) {
     const difference = ((size2Number - size1Number) / size2Number * 100).toFixed(0);
     return `${size1} is ${difference}% smaller than ${size2}`;
@@ -1157,41 +1201,41 @@ const getComparativeSize = (size1: string, size2: string) => {
     const difference = ((size1Number - size2Number) / size1Number * 100).toFixed(0);
     return `${size2} is ${difference}% smaller than ${size1}`;
   }
-  
+
   return "Both libraries have similar bundle sizes";
 };
 
 const getLibraryStrengths = (lib: any, otherLib: any) => {
   const strengths = [];
-  
+
   // Compare numeric metrics
   if (lib.stars > otherLib.stars) {
     strengths.push(`Higher community popularity with ${(lib.stars / 1000).toFixed(0)}k GitHub stars`);
   }
-  
+
   if (lib.weeklyDownloads > otherLib.weeklyDownloads) {
     strengths.push(`More widely used with ${(lib.weeklyDownloads / 1000000).toFixed(1)}M weekly downloads`);
   }
-  
+
   if (lib.performance.loadTime > otherLib.performance.loadTime) {
     strengths.push(`Better load time performance`);
   }
-  
+
   if (lib.performance.renderTime > otherLib.performance.renderTime) {
     strengths.push(`Faster rendering performance`);
   }
-  
+
   if (lib.performance.memoryUsage > otherLib.performance.memoryUsage) {
     strengths.push(`More efficient memory usage`);
   }
-  
+
   // Bundle size (smaller is better)
   const libSize = parseFloat(lib.bundle.gzipped.replace(" kB", ""));
   const otherLibSize = parseFloat(otherLib.bundle.gzipped.replace(" kB", ""));
   if (libSize < otherLibSize) {
     strengths.push(`Smaller bundle size (${lib.bundle.gzipped} vs ${otherLib.bundle.gzipped})`);
   }
-  
+
   // Add more qualitative strengths based on the specific library
   if (lib.name === "React.js") {
     strengths.push("Backed by Facebook with widespread enterprise adoption");
@@ -1203,19 +1247,19 @@ const getLibraryStrengths = (lib: any, otherLib: any) => {
     strengths.push("No virtual DOM overhead with compile-time optimizations");
     strengths.push("Less boilerplate code for common UI patterns");
   }
-  
+
   if (lib.dependencies.length < otherLib.dependencies.length) {
     strengths.push(`Fewer dependencies (${lib.dependencies.length} vs ${otherLib.dependencies.length})`);
   }
-  
+
   if (lib.documentation > otherLib.documentation) {
     strengths.push("Better documentation quality");
   }
-  
+
   if (lib.communitySupport > otherLib.communitySupport) {
     strengths.push("Stronger community support");
   }
-  
+
   // If we don't have enough strengths, add some generic ones
   if (strengths.length < 3) {
     if (!strengths.some(s => s.includes("documentation"))) {
@@ -1225,36 +1269,36 @@ const getLibraryStrengths = (lib: any, otherLib: any) => {
       strengths.push("Clean, intuitive API design");
     }
   }
-  
+
   return strengths;
 };
 
-const getRecommendation = (lib1: any, lib2: any) => {
-  const lib1Strengths = getLibraryStrengths(lib1, lib2);
-  const lib2Strengths = getLibraryStrengths(lib2, lib1);
-  
+const getRecommendation = (selectedLibData1: any, selectedLibData2: any) => {
+  const selectedLibData1Strengths = getLibraryStrengths(selectedLibData1, selectedLibData2);
+  const selectedLibData2Strengths = getLibraryStrengths(selectedLibData2, selectedLibData1);
+
   // Compare overall scores
-  const lib1Score = 
-    lib1.performance.loadTime + 
-    lib1.performance.renderTime + 
-    lib1.performance.memoryUsage +
-    lib1.documentation +
-    lib1.communitySupport;
-  
-  const lib2Score = 
-    lib2.performance.loadTime + 
-    lib2.performance.renderTime + 
-    lib2.performance.memoryUsage +
-    lib2.documentation +
-    lib2.communitySupport;
-  
-  if (Math.abs(lib1Score - lib2Score) < 20) {
+  const selectedLibData1Score =
+    selectedLibData1.performance.loadTime +
+    selectedLibData1.performance.renderTime +
+    selectedLibData1.performance.memoryUsage +
+    selectedLibData1.documentation +
+    selectedLibData1.communitySupport;
+
+  const selectedLibData2Score =
+    selectedLibData2.performance.loadTime +
+    selectedLibData2.performance.renderTime +
+    selectedLibData2.performance.memoryUsage +
+    selectedLibData2.documentation +
+    selectedLibData2.communitySupport;
+
+  if (Math.abs(selectedLibData1Score - selectedLibData2Score) < 20) {
     // Scores are close, give a balanced recommendation
-    return `Both ${lib1.name} and ${lib2.name} are excellent choices with different strengths. ${lib1.name} shines in ${lib1Strengths[0].toLowerCase()}, while ${lib2.name} excels at ${lib2Strengths[0].toLowerCase()}. Your choice should depend on your specific project requirements and team familiarity with either library.`;
-  } else if (lib1Score > lib2Score) {
-    return `Based on overall metrics, ${lib1.name} appears to be the better choice for most projects due to ${lib1Strengths[0].toLowerCase()} and ${lib1Strengths[1].toLowerCase()}. However, ${lib2.name} might still be preferable if ${lib2Strengths[0].toLowerCase()} is a critical requirement for your specific use case.`;
+    return `Both ${selectedLibData1.name} and ${selectedLibData2.name} are excellent choices with different strengths. ${selectedLibData1.name} shines in ${selectedLibData1Strengths[0].toLowerCase()}, while ${selectedLibData2.name} excels at ${selectedLibData2Strengths[0].toLowerCase()}. Your choice should depend on your specific project requirements and team familiarity with either library.`;
+  } else if (selectedLibData1Score > selectedLibData2Score) {
+    return `Based on overall metrics, ${selectedLibData1.name} appears to be the better choice for most projects due to ${selectedLibData1Strengths[0].toLowerCase()} and ${selectedLibData1Strengths[1].toLowerCase()}. However, ${selectedLibData2.name} might still be preferable if ${selectedLibData2Strengths[0].toLowerCase()} is a critical requirement for your specific use case.`;
   } else {
-    return `Based on overall metrics, ${lib2.name} appears to be the better choice for most projects due to ${lib2Strengths[0].toLowerCase()} and ${lib2Strengths[1].toLowerCase()}. However, ${lib1.name} might still be preferable if ${lib1Strengths[0].toLowerCase()} is a critical requirement for your specific use case.`;
+    return `Based on overall metrics, ${selectedLibData2.name} appears to be the better choice for most projects due to ${selectedLibData2Strengths[0].toLowerCase()} and ${selectedLibData2Strengths[1].toLowerCase()}. However, ${selectedLibData1.name} might still be preferable if ${selectedLibData1Strengths[0].toLowerCase()} is a critical requirement for your specific use case.`;
   }
 };
 
@@ -1279,5 +1323,6 @@ const Scale = (props: any) => (
     <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" />
   </svg>
 );
+
 
 export default ComparisonPage;
