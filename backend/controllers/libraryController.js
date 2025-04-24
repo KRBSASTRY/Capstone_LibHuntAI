@@ -2,7 +2,7 @@ const Library = require("../models/Library");
 
 exports.getLibraryById = async (req, res) => {
   try {
-    const library = await Library.findOne({ id: req.params.id });
+    const library = await Library.findById(req.params.id);
     if (!library) return res.status(404).json({ error: "Library not found" });
     res.json(library);
   } catch (err) {
