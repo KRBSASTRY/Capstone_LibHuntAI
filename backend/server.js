@@ -7,9 +7,14 @@ dotenv.config();
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:8080",
+  "https://capstone-lib-hunt-ai.vercel.app"
+];
+
 // CORS for Vercel frontend
 app.use(cors({
-  origin: "https://capstone-lib-hunt-ai.vercel.app",
+  origin: allowedOrigins,
   credentials: true
 }));
 
