@@ -1,7 +1,12 @@
 
 import axios from "axios";
 
-const API = "http://localhost:5002/api/auth";
+
+const API = `${import.meta.env.VITE_REACT_APP_API_URL}/api/auth`; 
+
+
+
+
 
 export const register = async (userData) => {
   const res = await axios.post(`${API}/register`, userData);

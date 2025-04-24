@@ -18,6 +18,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import NotFound from './pages/NotFound';
 
+console.log("✅ ENV:", import.meta.env.VITE_REACT_APP_API_URL);
+
+
 // Lazy loaded pages
 const Profile = lazy(() => import('./pages/Profile'));
 const LibraryDetail = lazy(() => import('./pages/LibraryDetail'));
