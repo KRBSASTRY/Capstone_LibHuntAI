@@ -1,0 +1,4 @@
+0 5 * * 1 cd /Users/ramabhadrasastrykolluri/Desktop/2nd_version_libhunt_ai/backend && /opt/homebrew/bin/node sync/syncAll.js >> /Users/ramabhadrasastrykolluri/Desktop/2nd_version_libhunt_ai/backend/sync_logs.txt 2>&1
+
+
+

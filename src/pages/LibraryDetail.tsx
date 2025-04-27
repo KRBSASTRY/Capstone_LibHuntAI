@@ -92,16 +92,16 @@ const LibraryDetail = () => {
       <div className="max-w-7xl mx-auto">
         {/* Back button */}
         <div className="mb-6">
-        <Button 
-  variant="ghost" 
-  asChild 
-  className="gap-2 hover:bg-white/5"
->
-  <Link to="/search">
-    <ArrowLeft size={16} />
-    Back to Search
-  </Link>
-</Button>
+          <Button
+            variant="ghost"
+            asChild
+            className="gap-2 hover:bg-white/5"
+          >
+            <Link to="/search">
+              <ArrowLeft size={16} />
+              Back to Search
+            </Link>
+          </Button>
 
 
         </div>
@@ -242,14 +242,19 @@ const LibraryDetail = () => {
                     <CardContent className="p-6">
                       <h2 className="text-xl font-display font-medium mb-4">Used By</h2>
                       <div className="flex flex-wrap gap-3">
-                        {library.usedBy.map((company: string) => (
-                          <div
-                            key={company}
-                            className="px-4 py-2 bg-white/5 rounded-lg border border-white/10"
-                          >
-                            {company}
-                          </div>
-                        ))}
+                        {Array.isArray(library.usedBy) && library.usedBy.length > 0 ? (
+                          library.usedBy.map((company: string) => (
+                            <div
+                              key={company}
+                              className="px-4 py-2 bg-white/5 rounded-lg border border-white/10"
+                            >
+                              {company}
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground">No usage data available</p>
+                        )}
+
                       </div>
                     </CardContent>
                   </Card>
@@ -342,9 +347,7 @@ const LibraryDetail = () => {
                     <CardContent className="p-6">
                       <h2 className="text-xl font-display font-medium mb-4">Dependencies</h2>
 
-                      {library.dependencies.length === 0 ? (
-                        <p className="text-muted-foreground">No dependencies</p>
-                      ) : (
+                      {Array.isArray(library.dependencies) && library.dependencies.length > 0 ? (
                         <ul className="space-y-2">
                           {library.dependencies.map((dep: string) => (
                             <li key={dep} className="flex items-center gap-2">
@@ -353,7 +356,10 @@ const LibraryDetail = () => {
                             </li>
                           ))}
                         </ul>
+                      ) : (
+                        <p className="text-muted-foreground">No dependencies available</p>
                       )}
+
                     </CardContent>
                   </Card>
 
@@ -363,11 +369,18 @@ const LibraryDetail = () => {
                       <h2 className="text-xl font-display font-medium mb-4">OS Compatibility</h2>
 
                       <div className="flex flex-wrap gap-2">
-                        {library.supportedOS.map((os: string) => (
-                          <Badge key={os} variant="outline" className="bg-white/5">
-                            {os}
-                          </Badge>
-                        ))}
+                        {Array.isArray(library.os) && library.os.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {library.os.map((os: string) => (
+                              <Badge key={os} variant="outline" className="bg-white/5">
+                                {os}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground">No OS information available</p>
+                        )}
+
                       </div>
                     </CardContent>
                   </Card>
@@ -720,101 +733,102 @@ const LibraryDetail = () => {
 
             {/* Alternatives tab */}
             <TabsContent value="alternatives" className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {library.alternatives.map((alt: string, index: number) => (
-                  <Card key={index} className="glass-card">
-                    <CardContent className="p-0">
-                      <div className="p-6">
-                        <h3 className="text-lg font-medium mb-2">{alt}</h3>
+              {Array.isArray(library.alternatives) && library.alternatives.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {library.alternatives.map((alt: string, index: number) => (
+                      <Card key={index} className="glass-card">
+                        <CardContent className="p-0">
+                          <div className="p-6">
+                            <h3 className="text-lg font-medium mb-2">{alt}</h3>
 
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {getAlternativeDescription(alt)}
-                        </p>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              {getAlternativeDescription(alt)}
+                            </p>
 
-                        {/* Comparison chart */}
-                        <div className="space-y-3 mb-4">
-                          <div>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span>Performance</span>
-                              <span>{getScore(alt, "performance")}/100</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Progress value={getScore(alt, "performance")} className="h-1.5 flex-1" />
-                              <Progress
-                                value={library.performance.loadTime}
-                                className="h-1.5 w-1.5 bg-white/20"
-                              />
-                            </div>
-                          </div>
+                            {/* Comparison chart */}
+                            <div className="space-y-3 mb-4">
+                              <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span>Performance</span>
+                                  <span>{getScore(alt, "performance")}/100</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Progress value={getScore(alt, "performance")} className="h-1.5 flex-1" />
+                                  <Progress value={library.performance?.loadTime || 0} className="h-1.5 w-1.5 bg-white/20" />
+                                </div>
+                              </div>
 
-                          <div>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span>Popularity</span>
-                              <span>{getScore(alt, "popularity")}/100</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Progress value={getScore(alt, "popularity")} className="h-1.5 flex-1" />
-                              <Progress
-                                value={90}
-                                className="h-1.5 w-1.5 bg-white/20"
-                              />
-                            </div>
-                          </div>
+                              <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span>Popularity</span>
+                                  <span>{getScore(alt, "popularity")}/100</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Progress value={getScore(alt, "popularity")} className="h-1.5 flex-1" />
+                                  <Progress value={90} className="h-1.5 w-1.5 bg-white/20" />
+                                </div>
+                              </div>
 
-                          <div>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span>Ease of Use</span>
-                              <span>{getScore(alt, "ease")}/100</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Progress value={getScore(alt, "ease")} className="h-1.5 flex-1" />
-                              <Progress
-                                value={85}
-                                className="h-1.5 w-1.5 bg-white/20"
-                              />
+                              <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span>Ease of Use</span>
+                                  <span>{getScore(alt, "ease")}/100</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Progress value={getScore(alt, "ease")} className="h-1.5 flex-1" />
+                                  <Progress value={85} className="h-1.5 w-1.5 bg-white/20" />
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
 
-                      <div className="border-t border-white/10 p-4 flex justify-between">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          asChild
-                          className="text-xs"
-                        >
-                          <Link to={`/library/${getAlternativeId(alt)}`}>
-                            View Details
-                          </Link>
-                        </Button>
+                          <div className="border-t border-white/10 p-4 flex justify-between">
+                            <Button variant="ghost" size="sm" asChild className="text-xs">
+                              <Link to={`/library/${getAlternativeId(alt)}`}>
+                                View Details
+                              </Link>
+                            </Button>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs gap-1"
-                          onClick={() => {
-                            window.location.href = `/compare?lib1=${library.id}&lib2=${getAlternativeId(alt)}`;
-                          }}
-                        >
-                          <Scale size={12} />
-                          Compare
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs gap-1"
+                              onClick={() => {
+                                window.location.href = `/compare?lib1=${library.id}&lib2=${getAlternativeId(alt)}`;
+                              }}
+                            >
+                              <Scale size={12} />
+                              Compare
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
 
-              <div className="text-center">
-                <Button asChild variant="outline" className="gap-2">
-                  <Link to={`/search?category=${library.category.toLowerCase()}`}>
-                    View More Alternatives
-                    <ArrowRight size={16} />
-                  </Link>
-                </Button>
-              </div>
+                  <div className="text-center">
+                    <Button asChild variant="outline" className="gap-2">
+                      <Link to={`/search?category=${library.category.toLowerCase()}`}>
+                        View More Alternatives
+                        <ArrowRight size={16} />
+                      </Link>
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center">
+                  <p className="text-muted-foreground mb-6">No alternative projects available.</p>
+                  <Button asChild variant="outline" className="gap-2">
+                    <Link to="/search">
+                      Explore Other Libraries
+                      <ArrowRight size={16} />
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </TabsContent>
+
 
             {/* Reviews tab */}
             <TabsContent value="reviews" className="space-y-8">

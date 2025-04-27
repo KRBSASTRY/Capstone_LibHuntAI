@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { 
-  Search, Star, Filter, X, ChevronDown, Package, Clock, 
+import {
+  Search, Star, Filter, X, ChevronDown, Package, Clock,
   ArrowUpDown, SortAsc, SortDesc, Check, Grid, List, Bookmark,
   SlidersHorizontal, CalendarClock, Download, Zap
 } from "lucide-react";
@@ -29,6 +29,7 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { fetchLibraries } from "@/services/libraryService";
 
 // // Mock data
 // const mockLibraries = [
@@ -335,13 +336,13 @@ import { useToast } from "@/hooks/use-toast";
 // ];
 
 const categories = [
-  "Frontend Framework", 
-  "Backend Framework", 
-  "Database", 
-  "State Management", 
-  "UI Components", 
-  "CSS Framework", 
-  "Testing", 
+  "Frontend Framework",
+  "Backend Framework",
+  "Database",
+  "State Management",
+  "UI Components",
+  "CSS Framework",
+  "Testing",
   "Framework",
   "Animation",
   "Data Fetching"
@@ -388,20 +389,24 @@ type Library = {
   typeSupport: string,
   documentation: number,
   communitySupport: number,
+  tags: string[],
+  typescript: boolean,
 }
 
 const SearchResults = () => {
   const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
   const initialCategory = searchParams.get("category") || "";
-  
+
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [filteredLibraries, setFilteredLibraries] = useState<Library[]>([]);
   const [loadingResults, setLoadingResults] = useState(true);
   const [favoriteLibraries, setFavoriteLibraries] = useState<string[]>([]);
-  
+
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     initialCategory ? [initialCategory] : []
@@ -412,17 +417,23 @@ const SearchResults = () => {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<string>("relevance");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  
 
-  
 
   useEffect(() => {
     const timer = setTimeout(() => {
       const fetchData = async () => {
         try {
-          const data = await fetchAllLibraries();
-          console.log("Fetched libraries:", data);
-          setLibraries(data);
+          const response = await fetchLibraries(1, 20); // Fetch page 1
+          console.log("Fetched libraries:", response);
+  
+          if (response && response.libraries) {
+            setLibraries(response.libraries);
+            setTotalPages(response.totalPages || 1);
+            setCurrentPage(1);
+          } else {
+            setLibraries([]); // fallback to empty array
+            setTotalPages(1);
+          }
         } catch (error) {
           console.error("Failed to fetch libraries:", error);
           toast({
@@ -436,44 +447,46 @@ const SearchResults = () => {
       };
   
       fetchData();
-    }, 800); 
+    }, 800);
   
-    return () => clearTimeout(timer); 
+    return () => clearTimeout(timer);
   }, []);
   
+
+
   // Filter libraries based on search query and filters
   useEffect(() => {
     if (libraries.length === 0) return;
-    
+
     let filtered = [...libraries];
-    
+
     // Apply search query filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(lib => 
-        lib.name.toLowerCase().includes(query) || 
+      filtered = filtered.filter(lib =>
+        lib.name.toLowerCase().includes(query) ||
         lib.description.toLowerCase().includes(query) ||
         lib.tags?.some(tag => tag.toLowerCase().includes(query))
       );
     }
-    
+
     // Apply category filter
     if (selectedCategories.length > 0) {
-      filtered = filtered.filter(lib => 
+      filtered = filtered.filter(lib =>
         selectedCategories.includes(lib.category)
       );
     }
-    
+
     // Apply stars filter
     if (minStars > 0) {
       filtered = filtered.filter(lib => lib.stars >= minStars);
     }
-    
+
     // Apply TypeScript filter
     if (hasTypescript !== null) {
       filtered = filtered.filter(lib => lib.typescript === hasTypescript);
     }
-    
+
     // Apply last updated filter
     if (updatedWithin) {
       filtered = filtered.filter(lib => {
@@ -489,7 +502,7 @@ const SearchResults = () => {
         return false;
       });
     }
-    
+
     // Apply sorting
     if (sortBy === "stars") {
       filtered.sort((a, b) => b.stars - a.stars);
@@ -520,19 +533,35 @@ const SearchResults = () => {
         return sizeA - sizeB;
       });
     }
-    
-    
+
+
     setFilteredLibraries(filtered);
   }, [libraries, searchQuery, selectedCategories, minStars, hasTypescript, updatedWithin, sortBy]);
-  
+
   const handleSearch = () => {
     // Update URL with search query
     setSearchParams({ q: searchQuery });
-    
+
     // Reset scroll position
     window.scrollTo(0, 0);
   };
-  
+
+  const handleLoadMore = async () => {
+    try {
+      const { libraries: newLibraries } = await fetchLibraries(currentPage + 1, 20);
+      setLibraries(prev => [...prev, ...newLibraries]);
+      setCurrentPage(prev => prev + 1);
+    } catch (error) {
+      console.error("Failed to load more libraries:", error);
+      toast({
+        title: "Error",
+        description: "Could not load more libraries.",
+        variant: "destructive",
+      });
+    }
+  };
+
+
   const handleCategoryToggle = (category: string) => {
     setSelectedCategories(prev => {
       if (prev.includes(category)) {
@@ -542,7 +571,7 @@ const SearchResults = () => {
       }
     });
   };
-  
+
   const clearFilters = () => {
     setSelectedCategories([]);
     setMinStars(0);
@@ -550,22 +579,22 @@ const SearchResults = () => {
     setUpdatedWithin(null);
     setSortBy("relevance");
   };
-  
+
   const toggleFavorite = (libraryId: string) => {
     setFavoriteLibraries(prev => {
       const newFavorites = prev.includes(libraryId)
         ? prev.filter(id => id !== libraryId)
         : [...prev, libraryId];
-      
+
       toast({
         title: prev.includes(libraryId) ? "Removed from favorites" : "Added to favorites",
         description: `Library has been ${prev.includes(libraryId) ? "removed from" : "added to"} your favorites.`,
       });
-      
+
       return newFavorites;
     });
   };
-  
+
   // Calculate average performance
   const getAverageperformance = (lib: Library): number => {
     if (
@@ -576,7 +605,7 @@ const SearchResults = () => {
     ) {
       return 0;
     }
-  
+
     return Math.round(
       (lib.performance.loadTime + lib.performance.renderTime + lib.performance.memoryUsage) / 3
     );
@@ -588,8 +617,8 @@ const SearchResults = () => {
       (lib.documentation + lib.codeMaintainability + lib.communitySupport) / 3
     );
   };
-  
-  
+
+
   // Format large numbers
   const formatNumber = (num: number) => {
     if (num >= 1000000) {
@@ -599,7 +628,7 @@ const SearchResults = () => {
     }
     return num.toString();
   };
-  
+
   return (
     <div className="min-h-screen py-10 px-6">
       <div className="max-w-7xl mx-auto">
@@ -630,7 +659,7 @@ const SearchResults = () => {
               Search Libraries
             </Button>
           </div>
-          
+
           {/* Filter pills */}
           {(selectedCategories.length > 0 || minStars > 0 || hasTypescript !== null || updatedWithin || sortBy !== "relevance") && (
             <div className="flex flex-wrap gap-2 mt-4">
@@ -641,7 +670,7 @@ const SearchResults = () => {
                   className="bg-accent/10 hover:bg-accent/20 transition-colors"
                 >
                   {category}
-                  <button 
+                  <button
                     className="ml-1 hover:text-foreground"
                     onClick={() => handleCategoryToggle(category)}
                   >
@@ -649,14 +678,14 @@ const SearchResults = () => {
                   </button>
                 </Badge>
               ))}
-              
+
               {minStars > 0 && (
                 <Badge
                   variant="outline"
                   className="bg-accent/10 hover:bg-accent/20 transition-colors"
                 >
                   {minStars}+ stars
-                  <button 
+                  <button
                     className="ml-1 hover:text-foreground"
                     onClick={() => setMinStars(0)}
                   >
@@ -664,14 +693,14 @@ const SearchResults = () => {
                   </button>
                 </Badge>
               )}
-              
+
               {hasTypescript !== null && (
                 <Badge
                   variant="outline"
                   className="bg-accent/10 hover:bg-accent/20 transition-colors"
                 >
                   {hasTypescript ? "TypeScript" : "No TypeScript"}
-                  <button 
+                  <button
                     className="ml-1 hover:text-foreground"
                     onClick={() => setHasTypescript(null)}
                   >
@@ -679,14 +708,14 @@ const SearchResults = () => {
                   </button>
                 </Badge>
               )}
-              
+
               {updatedWithin && (
                 <Badge
                   variant="outline"
                   className="bg-accent/10 hover:bg-accent/20 transition-colors"
                 >
                   Updated within {updatedWithin}
-                  <button 
+                  <button
                     className="ml-1 hover:text-foreground"
                     onClick={() => setUpdatedWithin(null)}
                   >
@@ -694,14 +723,14 @@ const SearchResults = () => {
                   </button>
                 </Badge>
               )}
-              
+
               {sortBy !== "relevance" && (
                 <Badge
                   variant="outline"
                   className="bg-accent/10 hover:bg-accent/20 transition-colors"
                 >
                   Sorted by: {sortBy}
-                  <button 
+                  <button
                     className="ml-1 hover:text-foreground"
                     onClick={() => setSortBy("relevance")}
                   >
@@ -709,10 +738,10 @@ const SearchResults = () => {
                   </button>
                 </Badge>
               )}
-              
-              <Button 
-                variant="ghost" 
-                size="sm" 
+
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={clearFilters}
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -721,7 +750,7 @@ const SearchResults = () => {
             </div>
           )}
         </motion.section>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filters sidebar (desktop) */}
           <motion.aside
@@ -734,16 +763,16 @@ const SearchResults = () => {
               <Card className="glass-card overflow-hidden">
                 <div className="p-4 border-b border-white/10 flex items-center justify-between">
                   <h2 className="text-lg font-medium">Filters</h2>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={clearFilters}
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
                     Reset
                   </Button>
                 </div>
-                
+
                 <CardContent className="p-4">
                   <ScrollArea className="h-[calc(100vh-200px)]">
                     <div className="space-y-6 pr-4">
@@ -753,12 +782,12 @@ const SearchResults = () => {
                         <div className="space-y-2">
                           {categories.map(category => (
                             <div key={category} className="flex items-center">
-                              <Checkbox 
+                              <Checkbox
                                 id={`category-${category}`}
                                 checked={selectedCategories.includes(category)}
                                 onCheckedChange={() => handleCategoryToggle(category)}
                               />
-                              <Label 
+                              <Label
                                 htmlFor={`category-${category}`}
                                 className="ml-2 text-sm cursor-pointer"
                               >
@@ -768,9 +797,9 @@ const SearchResults = () => {
                           ))}
                         </div>
                       </div>
-                      
+
                       <Separator className="bg-white/10" />
-                      
+
                       {/* Popularity filter */}
                       <div>
                         <h3 className="font-medium mb-3">Popularity</h3>
@@ -796,13 +825,13 @@ const SearchResults = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <Separator className="bg-white/10" />
-                      
+
                       {/* Last Updated filter */}
                       <div>
                         <h3 className="font-medium mb-3">Last Updated</h3>
-                        <RadioGroup 
+                        <RadioGroup
                           value={updatedWithin || ""}
                           onValueChange={(value) => setUpdatedWithin(value || null)}
                         >
@@ -826,13 +855,13 @@ const SearchResults = () => {
                           </div>
                         </RadioGroup>
                       </div>
-                      
+
                       <Separator className="bg-white/10" />
-                      
+
                       {/* TypeScript Support filter */}
                       <div>
                         <h3 className="font-medium mb-3">TypeScript Support</h3>
-                        <RadioGroup 
+                        <RadioGroup
                           value={hasTypescript === null ? "" : hasTypescript ? "yes" : "no"}
                           onValueChange={(value) => {
                             if (value === "") {
@@ -864,7 +893,7 @@ const SearchResults = () => {
               </Card>
             </div>
           </motion.aside>
-          
+
           {/* Results container */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -874,15 +903,15 @@ const SearchResults = () => {
           >
             {/* Mobile filter buttons */}
             <div className="flex items-center justify-between mb-6 lg:hidden">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setFiltersOpen(!filtersOpen)}
                 className="gap-2"
               >
                 <Filter size={16} />
                 Filters
               </Button>
-              
+
               <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -894,49 +923,49 @@ const SearchResults = () => {
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Sort By</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    
+
                     <DropdownMenuCheckboxItem
                       checked={sortBy === "relevance"}
                       onCheckedChange={() => setSortBy("relevance")}
                     >
                       Relevance
                     </DropdownMenuCheckboxItem>
-                    
+
                     <DropdownMenuCheckboxItem
                       checked={sortBy === "stars"}
                       onCheckedChange={() => setSortBy("stars")}
                     >
                       Stars
                     </DropdownMenuCheckboxItem>
-                    
+
                     <DropdownMenuCheckboxItem
                       checked={sortBy === "downloads"}
                       onCheckedChange={() => setSortBy("downloads")}
                     >
                       Downloads
                     </DropdownMenuCheckboxItem>
-                    
+
                     <DropdownMenuCheckboxItem
                       checked={sortBy === "recent"}
                       onCheckedChange={() => setSortBy("recent")}
                     >
                       Recently Updated
                     </DropdownMenuCheckboxItem>
-                    
+
                     <DropdownMenuCheckboxItem
                       checked={sortBy === "performance"}
                       onCheckedChange={() => setSortBy("performance")}
                     >
                       Performance
                     </DropdownMenuCheckboxItem>
-                    
+
                     <DropdownMenuCheckboxItem
                       checked={sortBy === "overall"}
                       onCheckedChange={() => setSortBy("overall")}
                     >
                       Overall performance
                     </DropdownMenuCheckboxItem>
-                    
+
                     <DropdownMenuCheckboxItem
                       checked={sortBy === "size"}
                       onCheckedChange={() => setSortBy("size")}
@@ -945,7 +974,7 @@ const SearchResults = () => {
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                
+
                 <div className="flex items-center rounded-md border border-white/10 p-1">
                   <Button
                     variant={view === "grid" ? "default" : "ghost"}
@@ -968,22 +997,22 @@ const SearchResults = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* Mobile filters modal */}
             {filtersOpen && (
               <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 lg:hidden">
                 <Card className="max-w-lg mx-auto glass-card overflow-hidden">
                   <div className="p-4 border-b border-white/10 flex items-center justify-between">
                     <h2 className="text-lg font-medium">Filters</h2>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setFiltersOpen(false)}
                     >
                       <X size={20} />
                     </Button>
                   </div>
-                  
+
                   <CardContent className="p-4">
                     <ScrollArea className="h-[calc(100vh-200px)]">
                       <div className="space-y-6 pr-4">
@@ -993,12 +1022,12 @@ const SearchResults = () => {
                           <div className="space-y-2">
                             {categories.map(category => (
                               <div key={category} className="flex items-center">
-                                <Checkbox 
+                                <Checkbox
                                   id={`mobile-category-${category}`}
                                   checked={selectedCategories.includes(category)}
                                   onCheckedChange={() => handleCategoryToggle(category)}
                                 />
-                                <Label 
+                                <Label
                                   htmlFor={`mobile-category-${category}`}
                                   className="ml-2 text-sm cursor-pointer"
                                 >
@@ -1008,9 +1037,9 @@ const SearchResults = () => {
                             ))}
                           </div>
                         </div>
-                        
+
                         <Separator className="bg-white/10" />
-                        
+
                         {/* Popularity filter */}
                         <div>
                           <h3 className="font-medium mb-3">Popularity</h3>
@@ -1036,13 +1065,13 @@ const SearchResults = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <Separator className="bg-white/10" />
-                        
+
                         {/* Last Updated filter */}
                         <div>
                           <h3 className="font-medium mb-3">Last Updated</h3>
-                          <RadioGroup 
+                          <RadioGroup
                             value={updatedWithin || ""}
                             onValueChange={(value) => setUpdatedWithin(value || null)}
                           >
@@ -1066,13 +1095,13 @@ const SearchResults = () => {
                             </div>
                           </RadioGroup>
                         </div>
-                        
+
                         <Separator className="bg-white/10" />
-                        
+
                         {/* TypeScript Support filter */}
                         <div>
                           <h3 className="font-medium mb-3">TypeScript Support</h3>
-                          <RadioGroup 
+                          <RadioGroup
                             value={hasTypescript === null ? "" : hasTypescript ? "yes" : "no"}
                             onValueChange={(value) => {
                               if (value === "") {
@@ -1100,16 +1129,16 @@ const SearchResults = () => {
                         </div>
                       </div>
                     </ScrollArea>
-                    
+
                     <div className="flex items-center justify-between mt-6 pt-6 border-t border-white/10">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         onClick={clearFilters}
                       >
                         Reset Filters
                       </Button>
-                      
-                      <Button 
+
+                      <Button
                         onClick={() => setFiltersOpen(false)}
                       >
                         Apply Filters
@@ -1119,7 +1148,7 @@ const SearchResults = () => {
                 </Card>
               </div>
             )}
-            
+
             {/* Results header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
               <div>
@@ -1136,7 +1165,7 @@ const SearchResults = () => {
                   </p>
                 )}
               </div>
-              
+
               <div className="flex items-center gap-4">
                 {/* Sort dropdown (desktop) */}
                 <div className="hidden md:block">
@@ -1153,49 +1182,49 @@ const SearchResults = () => {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Sort By</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      
+
                       <DropdownMenuCheckboxItem
                         checked={sortBy === "relevance"}
                         onCheckedChange={() => setSortBy("relevance")}
                       >
                         Relevance
                       </DropdownMenuCheckboxItem>
-                      
+
                       <DropdownMenuCheckboxItem
                         checked={sortBy === "stars"}
                         onCheckedChange={() => setSortBy("stars")}
                       >
                         Stars
                       </DropdownMenuCheckboxItem>
-                      
+
                       <DropdownMenuCheckboxItem
                         checked={sortBy === "downloads"}
                         onCheckedChange={() => setSortBy("downloads")}
                       >
                         Downloads
                       </DropdownMenuCheckboxItem>
-                      
+
                       <DropdownMenuCheckboxItem
                         checked={sortBy === "recent"}
                         onCheckedChange={() => setSortBy("recent")}
                       >
                         Recently Updated
                       </DropdownMenuCheckboxItem>
-                      
+
                       <DropdownMenuCheckboxItem
                         checked={sortBy === "performance"}
                         onCheckedChange={() => setSortBy("performance")}
                       >
                         Performance
                       </DropdownMenuCheckboxItem>
-                      
+
                       <DropdownMenuCheckboxItem
                         checked={sortBy === "overall"}
                         onCheckedChange={() => setSortBy("overall")}
                       >
                         Overall performance
                       </DropdownMenuCheckboxItem>
-                      
+
                       <DropdownMenuCheckboxItem
                         checked={sortBy === "size"}
                         onCheckedChange={() => setSortBy("size")}
@@ -1205,7 +1234,7 @@ const SearchResults = () => {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                
+
                 {/* View toggle (desktop) */}
                 <div className="hidden md:flex items-center rounded-md border border-white/10 p-1">
                   <Button
@@ -1229,7 +1258,7 @@ const SearchResults = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* Loading state */}
             {loadingResults && (
               <div className="space-y-4">
@@ -1248,7 +1277,7 @@ const SearchResults = () => {
                 ))}
               </div>
             )}
-            
+
             {/* Empty state */}
             {!loadingResults && filteredLibraries.length === 0 && (
               <Card className="glass-card">
@@ -1264,183 +1293,210 @@ const SearchResults = () => {
                 </CardContent>
               </Card>
             )}
-            
+
             {/* Grid view */}
             {!loadingResults && filteredLibraries.length > 0 && view === "grid" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {filteredLibraries.map((library) => (
-                  <Link
-                    key={library._id}
-                    to={`/library/${library._id}`}
-                    className="block"
-                  >
-                    <Card className="glass-card hover:border-accent/30 hover:bg-card/80 transition-colors overflow-hidden h-full">
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between mb-3">
-                          <h3 className="text-lg font-medium">{library.name}</h3>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 -mt-1 -mr-1 text-muted-foreground"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              toggleFavorite(library._id);
-                            }}
-                          >
-                            <Bookmark 
-                              size={16} 
-                              className={favoriteLibraries.includes(library._id) ? "fill-accent text-accent" : ""}
-                            />
-                          </Button>
-                        </div>
-                        
-                        <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
-                          {library.description}
-                        </p>
-                        
-                        <div className="flex flex-wrap items-center gap-2 mb-4">
-                          <Badge variant="outline" className="bg-white/5">
-                            {library.category}
-                          </Badge>
-                          
-                          {library.typescript && (
-                            <Badge className="bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">
-                              TypeScript
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center text-amber-400 text-sm">
-                              <Star size={16} className="mr-1 fill-amber-400" />
-                              {formatNumber(library.stars)}
-                            </div>
-                            
-                            <div className="flex items-center text-muted-foreground text-sm">
-                              <Package size={16} className="mr-1" />
-                              v{library.version}
-                            </div>
-                          </div>
-                          
-                          <div className="text-xs px-2 py-1 bg-white/10 rounded-full">
-                            performance: {getAverageperformance(library)}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            )}
-            
-            {/* List view */}
-            {!loadingResults && filteredLibraries.length > 0 && view === "list" && (
-              <div className="space-y-4">
-                {filteredLibraries.map((library) => (
-                  <motion.div
-                    key={library._id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Link
-                      to={`/library/${library._id}`}
-                      className="block"
-                    >
-                      <Card className="glass-card hover:border-accent/30 hover:bg-card/80 transition-colors overflow-hidden">
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {filteredLibraries.map((library) => (
+                    <Link key={library._id} to={`/library/${library._id}`} className="block">
+                      <Card className="glass-card hover:border-accent/30 hover:bg-card/80 transition-colors overflow-hidden h-full">
                         <CardContent className="p-5">
-                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-1">
-                                <h3 className="text-lg font-medium">{library.name}</h3>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-6 w-6 -mt-1 -mr-1 text-muted-foreground md:hidden"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    toggleFavorite(library._id);
-                                  }}
-                                >
-                                  <Bookmark 
-                                    size={16} 
-                                    className={favoriteLibraries.includes(library._id) ? "fill-accent text-accent" : ""}
-                                  />
-                                </Button>
+                          <div className="flex items-start justify-between mb-3">
+                            <h3 className="text-lg font-medium">{library.name}</h3>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 -mt-1 -mr-1 text-muted-foreground"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleFavorite(library._id);
+                              }}
+                            >
+                              <Bookmark
+                                size={16}
+                                className={favoriteLibraries.includes(library._id) ? "fill-accent text-accent" : ""}
+                              />
+                            </Button>
+                          </div>
+
+                          <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                            {library.description}
+                          </p>
+
+                          <div className="flex flex-wrap items-center gap-2 mb-4">
+                            <Badge variant="outline" className="bg-white/5">
+                              {library.category}
+                            </Badge>
+
+                            {library.typescript && (
+                              <Badge className="bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">
+                                TypeScript
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center text-amber-400 text-sm">
+                                <Star size={16} className="mr-1 fill-amber-400" />
+                                {formatNumber(library.stars)}
                               </div>
-                              
-                              <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
-                                {library.description}
-                              </p>
-                              
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Badge variant="outline" className="bg-white/5">
-                                  {library.category}
-                                </Badge>
-                                
-                                {library.typescript && (
-                                  <Badge className="bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">
-                                    TypeScript
-                                  </Badge>
-                                )}
+
+                              <div className="flex items-center text-muted-foreground text-sm">
+                                <Package size={16} className="mr-1" />
+                                v{library.version}
                               </div>
                             </div>
-                            
-                            <div className="flex flex-row md:flex-col gap-4 md:gap-2 md:items-end md:shrink-0 md:w-48">
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center text-amber-400 text-sm">
-                                  <Star size={16} className="mr-1 fill-amber-400" />
-                                  {formatNumber(library.stars)}
-                                </div>
-                                
-                                <div className="flex items-center text-muted-foreground text-sm">
-                                  <Package size={16} className="mr-1" />
-                                  v{library.version}
-                                </div>
-                                
-                                <div className="hidden md:flex items-center text-muted-foreground text-sm">
-                                  <Clock size={16} className="mr-1" />
-                                  {library.lastUpdate}
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center gap-2 md:justify-end">
-                                <div className="items-center text-xs px-2 py-1 bg-white/10 rounded-full">
-                                  performance: {getAverageperformance(library)}
-                                </div>
-                                
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-6 w-6 text-muted-foreground hidden md:flex"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    toggleFavorite(library._id);
-                                  }}
-                                >
-                                  <Bookmark 
-                                    size={16} 
-                                    className={favoriteLibraries.includes(library._id) ? "fill-accent text-accent" : ""}
-                                  />
-                                </Button>
-                              </div>
+
+                            <div className="text-xs px-2 py-1 bg-white/10 rounded-full">
+                              performance: {getAverageperformance(library)}
                             </div>
                           </div>
                         </CardContent>
                       </Card>
                     </Link>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        </div>
+                  ))}
+                </div>
+
+                {currentPage < totalPages && (
+                  <div className="flex justify-center mt-8">
+                    <Button
+                      variant="outline"
+                      onClick={handleLoadMore}
+                      className="px-8 py-4"
+                    >
+                      Load More
+                    </Button>
+                  </div>
+                )}
+              </>
+            )} {/* <<< Correctly close the Grid View `if` */}
+
+            {/* List view */}
+            {!loadingResults && filteredLibraries.length > 0 && view === "list" && (
+              <>
+                <div className="space-y-4">
+                  {filteredLibraries.map((library) => (
+                    <motion.div
+                      key={library._id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Link to={`/library/${library._id}`} className="block">
+                        <Card className="glass-card hover:border-accent/30 hover:bg-card/80 transition-colors overflow-hidden">
+                          <CardContent className="p-5">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-start justify-between mb-1">
+                                  <h3 className="text-lg font-medium">{library.name}</h3>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 -mt-1 -mr-1 text-muted-foreground md:hidden"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      toggleFavorite(library._id);
+                                    }}
+                                  >
+                                    <Bookmark
+                                      size={16}
+                                      className={favoriteLibraries.includes(library._id) ? "fill-accent text-accent" : ""}
+                                    />
+                                  </Button>
+                                </div>
+
+                                <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
+                                  {library.description}
+                                </p>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge variant="outline" className="bg-white/5">
+                                    {library.category}
+                                  </Badge>
+
+                                  {library.typescript && (
+                                    <Badge className="bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">
+                                      TypeScript
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-row md:flex-col gap-4 md:gap-2 md:items-end md:shrink-0 md:w-48">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center text-amber-400 text-sm">
+                                    <Star size={16} className="mr-1 fill-amber-400" />
+                                    {formatNumber(library.stars)}
+                                  </div>
+
+                                  <div className="flex items-center text-muted-foreground text-sm">
+                                    <Package size={16} className="mr-1" />
+                                    v{library.version}
+                                  </div>
+
+                                  <div className="hidden md:flex items-center text-muted-foreground text-sm">
+                                    <Clock size={16} className="mr-1" />
+                                    {library.lastUpdate}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 md:justify-end">
+                                  <div className="items-center text-xs px-2 py-1 bg-white/10 rounded-full">
+                                    performance: {getAverageperformance(library)}
+                                  </div>
+
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground hidden md:flex"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      toggleFavorite(library._id);
+                                    }}
+                                  >
+                                    <Bookmark
+                                      size={16}
+                                      className={favoriteLibraries.includes(library._id) ? "fill-accent text-accent" : ""}
+                                    />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {currentPage < totalPages && (
+                  <div className="flex justify-center mt-8">
+                    <Button
+                      variant="outline"
+                      onClick={handleLoadMore}
+                      className="px-8 py-4"
+                    >
+                      Load More
+                    </Button>
+                  </div>
+                )}
+              </>
+            )} 
+
+          </motion.div> 
+
+        </div> 
+
+      </div> 
+
       </div>
-    </div>
+
+
   );
 };
 

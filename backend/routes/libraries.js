@@ -1,41 +1,41 @@
 const express = require("express");
 const router = express.Router();
-const { bulkInsertLibraries } = require("../controllers/libraryController");
-const Library = require("../models/Library");
-const libraryController = require("../controllers/libraryController");
-
-
 const {
-  getLibraries,
+  getPaginatedLibraries,
   getLibraryById,
   createLibrary,
   updateLibrary,
-  deleteLibrary
+  deleteLibrary,
+  bulkInsertLibraries,
+  getAllLibraries,
 } = require("../controllers/libraryController");
 
 const { verifyToken, verifyAdmin } = require("../config");
 
-router.get("/", async (req, res) => {
-  try {
-    const libraries = await Library.find();
-    res.json(libraries);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+console.log("🟣 Loading libraries router...");
+
+// ✅ Health check
+router.get("/check", (req, res) => {
+  console.log("✅ /api/libraries/check endpoint hit.");
+  res.send("Libraries Route Working ✅");
 });
-router.get("/:id", libraryController.getLibraryById);
+
+// ✅ Paginated libraries first
+router.get("/", (req, res, next) => {
+  console.log("🟣 /api/libraries base route hit.");
+  next();
+}, getPaginatedLibraries);
+
+// ✅ Full libraries (for admin)
+router.get("/all", getAllLibraries);
+
+// ✅ DYNAMIC: Get a library by ID (MUST BE LAST)
+router.get("/:id", getLibraryById);
+
+// ✅ Create, Update, Delete
 router.post("/", verifyToken, verifyAdmin, createLibrary);
 router.put("/:id", verifyToken, verifyAdmin, updateLibrary);
 router.delete("/:id", verifyToken, verifyAdmin, deleteLibrary);
-router.post("/bulk", verifyToken, verifyAdmin, async (req, res) => {
-  try {
-    const libraries = await Library.insertMany(req.body);
-    res.status(201).json(libraries);
-  } catch (err) {
-    console.error("Bulk upload error:", err); // Add logging
-    res.status(500).json({ message: "Bulk insert failed", error: err.message });
-  }
-});
-
+router.post("/bulk", verifyToken, verifyAdmin, bulkInsertLibraries);
 
 module.exports = router;

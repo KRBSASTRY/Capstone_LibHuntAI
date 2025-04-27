@@ -1,6 +1,5 @@
-<<<<<<< HEAD
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -8,21 +7,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependency directories
+node_modules/
+dist/
+dist-ssr/
+
+# Environment and local files
+.env
 *.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Logs or Sync outputs
+sync_logs.txt
+
+# IDE/editor settings
+.vscode/
+.idea/
 .DS_Store
+
+# Misc
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-=======
-node_modules
->>>>>>> 5b7c978 (commit after sucessfully integrating data to comapris)
