@@ -29,7 +29,7 @@ Render (for backend deployment)
 Installation
 
 1. Clone the repository
-git clone https://github.com/YOUR_USERNAME/LibHunt_AI_Capstone.git
+git clone https://github.com/KRBSASTRY/LibHunt_AI_Capstone.git
 2. Install dependencies
 Navigate to the project folder and run the following commands:
 
