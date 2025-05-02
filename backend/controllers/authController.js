@@ -95,7 +95,11 @@ exports.forgotPassword = async (req, res) => {
 
     return res.status(200).json({ message: "Reset link sent successfully" });
   } catch (err) {
-    console.error("🔥 Forgot Password Error:", err?.response?.data || err.message);
+    console.error("🔥 Forgot Password Error:", {
+      msg: err.message,
+      raw: err?.response?.data,
+      tokenSecret: process.env.RESET_TOKEN_SECRET ? "✔️ defined" : "❌ undefined",
+    });    
     return res.status(500).json({ message: "Failed to send reset link" });
   }
 };
@@ -144,12 +148,22 @@ exports.changePassword = async (req, res) => {
   }
 };
 
-// GITHUB AUTH
 exports.githubAuth = async (req, res) => {
   const { code } = req.query;
+
+  console.log("📥 Incoming GitHub OAuth callback...");
+  console.log("🔑 Code received:", code);
+
   if (!code) return res.status(400).json({ message: "GitHub code is missing" });
 
   try {
+    if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+      console.error("❌ Missing GitHub Client ID or Secret in env");
+      return res.status(500).json({ message: "Server misconfiguration" });
+    }
+
+    console.log("🌐 Requesting GitHub token with client_id:", process.env.GITHUB_CLIENT_ID);
+
     const tokenRes = await axios.post(
       "https://github.com/login/oauth/access_token",
       {
@@ -157,12 +171,16 @@ exports.githubAuth = async (req, res) => {
         client_secret: process.env.GITHUB_CLIENT_SECRET,
         code,
       },
-      { headers: { Accept: "application/json" } }
+      {
+        headers: { Accept: "application/json" },
+      }
     );
+
+    console.log("🎫 GitHub token response:", tokenRes.data);
 
     const accessToken = tokenRes.data.access_token;
     if (!accessToken) {
-      console.error("❌ GitHub token exchange failed:", tokenRes.data);
+      console.error("❌ GitHub did not return access_token");
       return res.status(500).json({ message: "GitHub token exchange failed" });
     }
 
@@ -172,17 +190,24 @@ exports.githubAuth = async (req, res) => {
 
     let { login, email, name, avatar_url } = userRes.data;
 
+    console.log("👤 GitHub User:", { login, email, name });
+
+    // Fallback to /emails endpoint
     if (!email) {
+      console.log("📩 Email not public. Fetching from /user/emails...");
       const emailRes = await axios.get("https://api.github.com/user/emails", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
+
+      console.log("📩 Email response:", emailRes.data);
+
       const primaryEmail = emailRes.data.find((e) => e.primary && e.verified);
       email = primaryEmail?.email;
     }
 
     if (!email) {
-      console.error("❌ No verified email found in GitHub account");
-      return res.status(500).json({ message: "GitHub account has no accessible email" });
+      console.error("❌ Still no verified email found");
+      return res.status(500).json({ message: "GitHub account has no verified email" });
     }
 
     let user = await User.findOne({ email });
@@ -197,14 +222,11 @@ exports.githubAuth = async (req, res) => {
       });
     }
 
-    if (!process.env.JWT_SECRET) {
-      console.error("❌ JWT_SECRET not set");
-      return res.status(500).json({ message: "Server misconfiguration" });
-    }
-
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "2d",
     });
+
+    console.log("✅ GitHub Auth Success → Redirecting with token");
 
     return res.redirect(`${process.env.FRONTEND_PROD_URL}/login?token=${token}`);
   } catch (err) {
