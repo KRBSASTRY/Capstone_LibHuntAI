@@ -137,8 +137,8 @@ const Register = () => {
                 className="w-full flex items-center gap-2 border-white/10"
                 onClick={() => {
                   window.location.href = `https://github.com/login/oauth/authorize?client_id=${import.meta.env.VITE_GITHUB_CLIENT_ID
-                    }&redirect_uri=${import.meta.env.VITE_BACKEND_URL}/api/auth/github/callback`;
-                }}
+                    }&redirect_uri=${import.meta.env.VITE_BACKEND_URL}/api/auth/github/callback&scope=user:email`;
+                }}                
               >
                 <Github size={18} />
                 <span>Continue with GitHub</span>
