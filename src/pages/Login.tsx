@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,62 +12,128 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth"; // ✅ Use context not service
+import { useAuth } from "@/hooks/useAuth";
+import axios from "axios";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [showForgotForm, setShowForgotForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login } = useAuth(); // ✅ Use context-based login
+  const { login } = useAuth();
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const resetToken = query.get("token");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (resetToken) {
+      if (!newPassword || !confirmPassword) {
+        toast({ title: "Missing Fields", description: "Please enter and confirm your new password.", variant: "destructive" });
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        toast({ title: "Mismatch", description: "Passwords do not match.", variant: "destructive" });
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        await axios.post(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/reset-password`, {
+          token: resetToken,
+          password: newPassword,
+        });
+
+        toast({ title: "Password Updated", description: "You can now log in with your new password." });
+        navigate("/login");
+      } catch (err: any) {
+        toast({
+          title: "Reset Failed",
+          description: err.response?.data?.message || "Something went wrong.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     if (!email || !password) {
-      setError("Please enter both email and password");
+      toast({ title: "Missing Fields", description: "Please enter both email and password.", variant: "destructive" });
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      toast({ title: "Invalid Email", description: "Please enter a valid email address.", variant: "destructive" });
       return;
     }
 
     try {
       setIsLoading(true);
-      setError("");
+      await login(email.toLowerCase(), password);
 
-      await login(email, password); // ✅ Call context login
-
+      toast({ title: "Login successful", description: "Welcome back to LibHunt AI!" });
+      navigate("/");
+    } catch (err: any) {
+      const status = err?.response?.status;
       toast({
-        title: "Login successful",
-        description: "Welcome back to LibHunt AI!",
+        title: "Login failed",
+        description:
+          status === 404
+            ? "Email not registered. Please sign up first."
+            : status === 401
+              ? "Incorrect password. Please try again."
+              : "Unexpected error. Please try again later.",
+        variant: "destructive",
       });
-
-      navigate("/"); // ✅ Or /chat, whatever your main page is
-    } catch (err) {
-      setError("Invalid email or password. Please try again.");
-      console.error("Login error:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!forgotEmail) {
+      toast({ title: "Email Required", description: "Please enter your email to receive a reset link.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await axios.post(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/forgot-password`, {
+        email: forgotEmail.toLowerCase(),
+      });
+
+      toast({ title: "Reset Link Sent", description: "Check your inbox. This link is valid for 30 minutes." });
+      setForgotEmail("");
+      setShowForgotForm(false);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      toast({
+        title: "Reset Failed",
+        description: status === 404 ? "This email is not registered. Please sign up or try again." : "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center py-16 px-4 sm:px-6 lg:px-8 relative">
-      {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent to-accent/5 pointer-events-none"></div>
       <div className="absolute -top-20 -left-20 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
       <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-accent/5 rounded-full blur-3xl"></div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md z-10"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md z-10">
         <div className="flex justify-center mb-8">
           <Link to="/" className="flex items-center gap-2">
             <div className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-accent to-cyan-300 overflow-hidden">
@@ -80,85 +146,116 @@ const Login = () => {
         <Card className="glass-card border-white/10">
           <CardHeader>
             <CardTitle className="text-2xl font-display">Sign in to your account</CardTitle>
-            <CardDescription>
-              Enter your email and password to access your account
-            </CardDescription>
+            <CardDescription>Enter your email and password to access your account</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit}>
-              {error && (
-                <div className="bg-destructive/20 text-destructive p-3 rounded-md flex items-start gap-2 mb-4">
-                  <AlertCircle size={18} className="mt-0.5" />
-                  <span>{error}</span>
-                </div>
-              )}
-
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    placeholder="name@example.com"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+                  <Input id="email" placeholder="name@example.com" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <Link
-                      to="/forgot-password"
-                      className="text-sm text-accent hover:underline"
-                    >
-                      Forgot password?
-                    </Link>
+                {!resetToken && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      <button type="button" className="text-sm text-accent hover:underline" onClick={() => setShowForgotForm((prev) => !prev)}>
+                        Forgot password?
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </div>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      onClick={() => setShowPassword(!showPassword)}
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
+                )}
+
+                {resetToken && (
+                  <>
+                    {/* NEW PASSWORD */}
+                    <div className="space-y-2 relative">
+                      <Label htmlFor="newPassword">New Password</Label>
+                      <Input
+                        id="newPassword"
+                        type={showPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-9 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+
+                    {/* CONFIRM PASSWORD */}
+                    <div className="space-y-2 relative">
+                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        type={showPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-9 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+
+                  </>
+                )}
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? (
                     <span className="flex items-center">
                       <span className="animate-spinner h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
-                      Signing in...
+                      {resetToken ? "Updating password..." : "Signing in..."}
                     </span>
                   ) : (
                     <span className="flex items-center">
-                      Sign in
+                      {resetToken ? "Update Password" : "Sign in"}
                       <ArrowRight size={16} className="ml-2" />
                     </span>
                   )}
                 </Button>
               </div>
             </form>
+
+            {showForgotForm && (
+              <div className="mt-6">
+                <Label htmlFor="forgotEmail">Enter your email</Label>
+                <div className="flex gap-2 mt-2">
+                  <Input id="forgotEmail" type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="you@example.com" />
+                  <Button type="button" onClick={handleForgotPassword}>
+                    Send Link
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
           <CardFooter>
             <p className="text-center w-full text-sm">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-accent hover:underline">
-                Sign up
-              </Link>
+              Don't have an account? <Link to="/register" className="text-accent hover:underline">Sign up</Link>
             </p>
           </CardFooter>
         </Card>

@@ -6,6 +6,7 @@ import React, {
   ReactNode,
 } from "react";
 import * as authService from "../services/authService";
+
 // --------------------
 // Types
 // --------------------
@@ -55,9 +56,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const user = await authService.login({ email, password });
-  
-      // Store and sync
+      const user = await authService.login(email, password); // ✅ Pass flat args
       localStorage.setItem("libhunt-user", JSON.stringify(user));
       setUser(user);
     } catch (err) {
@@ -67,14 +66,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(false);
     }
   };
-  
 
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
       const user = await authService.register({ name, email, password });
-
-      //Store and sync
       localStorage.setItem("libhunt-user", JSON.stringify(user));
       setUser(user);
     } catch (err) {
@@ -86,10 +82,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
-    authService.logout(); // clears localStorage
+    authService.logout();
     setUser(null);
   };
-  
 
   return (
     <AuthContext.Provider

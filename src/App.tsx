@@ -17,6 +17,7 @@ import About from './pages/About';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import NotFound from './pages/NotFound';
+import Settings  from './pages/settings';
 
 console.log("✅ ENV:", import.meta.env.VITE_REACT_APP_API_URL);
 
@@ -61,6 +62,7 @@ const AppRoutes = () => (
     <Route path="/" element={<Index />} />
     <Route path="/about" element={<About />} />
     <Route path="/login" element={<Login />} />
+    <Route path="/reset-password" element={<Login />} />
     <Route path="/register" element={<Register />} />
     <Route
       path="/search"
@@ -114,6 +116,18 @@ const AppRoutes = () => (
         </AdminRoute>
       }
     />
+
+    <Route
+      path="/settings"
+      element={
+        <ProtectedRoute>
+          <Suspense fallback={<Spinner />}>
+            <Settings />
+          </Suspense>
+        </ProtectedRoute>
+      }
+    />
+
 
     {/* Catch-all */}
     <Route path="*" element={<NotFound />} />

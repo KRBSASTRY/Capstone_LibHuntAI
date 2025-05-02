@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, ArrowRight, AlertCircle, Github, User } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Github, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { register as registerUser } from "@/services/authService";
 
@@ -19,7 +19,6 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
 
   const navigate = useNavigate();
@@ -31,30 +30,55 @@ const Register = () => {
     e.preventDefault();
 
     if (!name || !email || !password || !confirmPassword) {
-      setError("Please fill in all fields");
+      toast({
+        title: "Missing Fields",
+        description: "Please fill in all fields.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!acceptTerms) {
-      setError("You must accept the terms and conditions");
+      toast({
+        title: "Terms Not Accepted",
+        description: "You must accept the terms and conditions.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!validatePassword(password)) {
-      setError("Password must be at least 8 characters long");
+      toast({
+        title: "Weak Password",
+        description: "Password must be at least 8 characters long.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
       setIsLoading(true);
-      setError("");
 
-      await registerUser({ name, email, password });
+      await registerUser({ name, email: email.toLowerCase(), password });
 
       toast({
         title: "Registration successful",
@@ -62,9 +86,19 @@ const Register = () => {
       });
 
       navigate("/login");
-    } catch (err) {
-      setError("Failed to create an account. Please try again.");
-      console.error("Registration error:", err);
+    } catch (err: any) {
+      toast({
+        title: "Registration failed",
+        description:
+          err.response?.status === 409
+            ? "This email already exists. Please use a different email address."
+            : "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
     } finally {
       setIsLoading(false);
     }
@@ -98,10 +132,18 @@ const Register = () => {
           </CardHeader>
           <CardContent>
             <div className="mb-5">
-              <Button variant="outline" className="w-full flex items-center gap-2 border-white/10">
+              <Button
+                variant="outline"
+                className="w-full flex items-center gap-2 border-white/10"
+                onClick={() => {
+                  window.location.href = `https://github.com/login/oauth/authorize?client_id=${import.meta.env.VITE_GITHUB_CLIENT_ID
+                    }&redirect_uri=${import.meta.env.VITE_BACKEND_URL}/api/auth/github/callback`;
+                }}
+              >
                 <Github size={18} />
                 <span>Continue with GitHub</span>
               </Button>
+
             </div>
 
             <div className="flex items-center my-5">
@@ -111,13 +153,6 @@ const Register = () => {
             </div>
 
             <form onSubmit={handleSubmit}>
-              {error && (
-                <div className="bg-destructive/20 text-destructive p-3 rounded-md flex items-start gap-2 mb-4">
-                  <AlertCircle size={18} className="mt-0.5" />
-                  <span>{error}</span>
-                </div>
-              )}
-
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>

@@ -1372,7 +1372,7 @@ const SearchResults = () => {
                   </div>
                 )}
               </>
-            )} {/* <<< Correctly close the Grid View `if` */}
+            )} 
 
             {/* List view */}
             {!loadingResults && filteredLibraries.length > 0 && view === "list" && (
