@@ -35,7 +35,8 @@ const Settings = () => {
         newPassword,
       }, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("libhunt-token")}`,
+            Authorization: `Bearer ${localStorage.getItem("libhunt-token")}`,
+
         }
       });
 
@@ -157,3 +158,4 @@ const Settings = () => {
 };
 
 export default Settings;
+

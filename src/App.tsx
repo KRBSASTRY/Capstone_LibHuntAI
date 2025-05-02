@@ -17,7 +17,7 @@ import About from './pages/About';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import NotFound from './pages/NotFound';
-import Settings  from './pages/settings';
+import Settings  from './pages/Settings';
 
 console.log("✅ ENV:", import.meta.env.VITE_REACT_APP_API_URL);
 
