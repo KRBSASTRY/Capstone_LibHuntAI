@@ -90,29 +90,30 @@ exports.forgotPassword = async (req, res) => {
 
     const token = jwt.sign({ id: user._id }, process.env.RESET_TOKEN_SECRET, { expiresIn: "30m" });
 
-    const frontendURL =
-      process.env.NODE_ENV === "production"
-        ? process.env.FRONTEND_PROD_URL
-        : process.env.FRONTEND_DEV_URL;
-
+    const frontendURL = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_DEV_URL;
     const resetLink = `${frontendURL}/reset-password?token=${token}`;
 
-    await resend.emails.send({
-      from: "onboarding@resend.dev",     
+    const sendResult = await resend.emails.send({
+      from: "onboarding@resend.dev",
       to: user.email,
       subject: "Reset your LibHunt AI password",
-      html: `<p>Hello ${user.name},</p>
-             <p>Click the link below to reset your password. This link is valid for <strong>30 minutes</strong>.</p>
-             <p><a href="${resetLink}" target="_blank">${resetLink}</a></p>
-             <p>If you didn’t request this, you can ignore it.</p>`
+      html: `
+        <p>Hello ${user.name || "there"},</p>
+        <p>Click the link below to reset your password. This link is valid for <strong>30 minutes</strong>.</p>
+        <p><a href="${resetLink}" target="_blank">${resetLink}</a></p>
+        <p>If you didn’t request this, you can ignore it.</p>
+      `,
     });
+
+    console.log("✅ Resend Email Sent:", sendResult);
 
     return res.status(200).json({ message: "Reset link sent successfully and valid for 30 minutes." });
   } catch (err) {
-    console.error("Forgot Password Error:", err.message);
+    console.error("🔥 Forgot Password Error:", err.message);
     return res.status(500).json({ message: "Failed to send reset link" });
   }
 };
+
 
 
 
@@ -160,13 +161,12 @@ exports.changePassword = async (req, res) => {
 };
 
 
-
-
 exports.githubAuth = async (req, res) => {
   const { code } = req.query;
   if (!code) return res.status(400).json({ message: "GitHub code is missing" });
 
   try {
+    // 1. Exchange code for access token
     const tokenRes = await axios.post(
       "https://github.com/login/oauth/access_token",
       {
@@ -174,39 +174,58 @@ exports.githubAuth = async (req, res) => {
         client_secret: process.env.GITHUB_CLIENT_SECRET,
         code,
       },
-      {
-        headers: { Accept: "application/json" },
-      }
+      { headers: { Accept: "application/json" } }
     );
 
     const accessToken = tokenRes.data.access_token;
+    if (!accessToken) {
+      console.error("❌ GitHub token exchange failed:", tokenRes.data);
+      return res.status(500).json({ message: "GitHub token exchange failed" });
+    }
 
-    const githubUser = await axios.get("https://api.github.com/user", {
+    // 2. Fetch GitHub user data
+    const userRes = await axios.get("https://api.github.com/user", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    const { login, email, name, avatar_url } = githubUser.data;
+    let { login, email, name, avatar_url } = userRes.data;
 
+    // 3. If no public email, fetch from /user/emails
+    if (!email) {
+      const emailRes = await axios.get("https://api.github.com/user/emails", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      const primaryEmail = emailRes.data.find((e) => e.primary && e.verified);
+      email = primaryEmail?.email;
+
+      if (!email) {
+        console.error("❌ No verified email found in GitHub account");
+        return res.status(500).json({ message: "GitHub account has no accessible email" });
+      }
+    }
+
+    // 4. Lookup or create user
     let user = await User.findOne({ email });
     if (!user) {
       user = await User.create({
         name: name || login,
         email,
-        password: "github-auth", // flag value; not used
+        password: "github-auth", // flag
         githubUsername: login,
         githubAvatar: avatar_url,
         isGithubAuth: true,
       });
     }
 
+    // 5. Issue JWT
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "2d",
     });
 
     return res.redirect(`${process.env.FRONTEND_PROD_URL}/login?token=${token}`);
   } catch (err) {
-    console.error("GitHub Auth Error:", err.message);
+    console.error("🔥 GitHub Auth Error:", err?.response?.data || err.message);
     return res.status(500).json({ message: "GitHub authentication failed" });
   }
 };
-
