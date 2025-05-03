@@ -24,6 +24,8 @@ export type AuthContextType = {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  token: string | null;
+  setToken: (token: string | null) => void;
 };
 
 // --------------------
@@ -36,6 +38,8 @@ export const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: () => {},
+  token: null,
+  setToken: () => {},
 });
 
 // --------------------
@@ -44,6 +48,7 @@ export const AuthContext = createContext<AuthContextType>({
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [token, setTokenState] = useState<string | null>(localStorage.getItem("libhunt-token"));
 
   useEffect(() => {
     const storedUser = localStorage.getItem("libhunt-user");
@@ -53,10 +58,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
+  const setToken = (token: string | null) => {
+    if (token) {
+      localStorage.setItem("libhunt-token", token);
+    } else {
+      localStorage.removeItem("libhunt-token");
+    }
+    setTokenState(token);
+  };
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const user = await authService.login(email, password); // ✅ Pass flat args
+      const { token, user } = await authService.login(email, password);
+      setToken(token);
       localStorage.setItem("libhunt-user", JSON.stringify(user));
       setUser(user);
     } catch (err) {
@@ -84,6 +99,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     authService.logout();
     setUser(null);
+    setToken(null);
   };
 
   return (
@@ -95,6 +111,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         register,
         logout,
+        token,
+        setToken,
       }}
     >
       {children}

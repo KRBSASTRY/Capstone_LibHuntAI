@@ -228,7 +228,8 @@ exports.githubAuth = async (req, res) => {
 
     console.log("✅ GitHub Auth Success → Redirecting with token");
 
-    return res.redirect(`${process.env.FRONTEND_PROD_URL}/login?token=${token}`);
+    
+    return res.redirect(`${process.env.FRONTEND_PROD_URL}/auth-success?token=${token}`);
   } catch (err) {
     console.error("🔥 GitHub Auth Error:", err?.response?.data || err.message);
     return res.status(500).json({ message: "GitHub authentication failed" });

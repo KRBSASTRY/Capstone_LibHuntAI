@@ -10,8 +10,12 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     match: [/^[^\s@]+@[^\s@]+\.com$/, "Please enter a valid email address"],
   },
-
-  password: { type: String, required: true },
+  password: {
+    type: String,
+    required: function () {
+      return !this.isGithubAuth;
+    },
+  },  
   isAdmin: { type: Boolean, default: false },
   githubUsername: String,
   githubAvatar: String,
