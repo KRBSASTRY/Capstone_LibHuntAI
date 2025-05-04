@@ -126,7 +126,7 @@ const Login = () => {
         description: "Check your inbox for the 8-digit code. It is valid for 30 minutes.",
       });
   
-      navigate(`/verify-code?email=${forgotEmail.toLowerCase()}`);
+      navigate(`/verify-code?email=${forgotEmail.toLowerCase()}&origin=forgot`);
     } catch (err: any) {
       const status = err?.response?.status;
       toast({

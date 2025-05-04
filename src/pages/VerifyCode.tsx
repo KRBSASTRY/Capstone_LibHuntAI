@@ -1,9 +1,17 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -18,11 +26,16 @@ const VerifyCode = () => {
 
   const query = new URLSearchParams(location.search);
   const email = query.get("email");
+  const origin = query.get("origin"); // either 'forgot' or undefined
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !code) {
-      toast({ title: "Missing Info", description: "Email or code missing.", variant: "destructive" });
+      toast({
+        title: "Missing Info",
+        description: "Email or code missing.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -31,8 +44,16 @@ const VerifyCode = () => {
       const res = await axios.post(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/verify-code`, {
         email,
         code,
+        origin,
       });
 
+      // ✅ FOR FORGOT FLOW: navigate to reset-password
+      if (origin === "forgot" && res.data.resetToken) {
+        navigate(`/reset-password?token=${res.data.resetToken}`);
+        return;
+      }
+
+      // ✅ ELSE: login as usual
       const token = res.data.token;
       localStorage.setItem("libhunt-token", token);
       setToken(token);
@@ -60,31 +81,42 @@ const VerifyCode = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12">
-      <form
-        onSubmit={handleSubmit}
-        className="max-w-md w-full space-y-6 bg-white dark:bg-black/10 backdrop-blur border border-white/10 p-6 rounded-xl"
+    <div className="flex min-h-screen items-center justify-center py-16 px-4 sm:px-6 lg:px-8 relative">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md z-10"
       >
-        <h2 className="text-xl font-semibold text-center">Enter Verification Code</h2>
-        <p className="text-sm text-center text-muted-foreground mb-4">
-          A verification code has been sent to <strong>{email}</strong>
-        </p>
-        <div className="space-y-2">
-          <Label htmlFor="code">8-digit Code</Label>
-          <Input
-            id="code"
-            type="text"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Enter your code"
-            maxLength={8}
-            required
-          />
-        </div>
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Verifying..." : "Verify Code"}
-        </Button>
-      </form>
+        <Card className="glass-card border-white/10">
+          <CardHeader>
+            <CardTitle className="text-2xl font-display">Enter Verification Code</CardTitle>
+            <CardDescription>
+              A code has been sent to <strong>{email}</strong>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="code">8-digit Code</Label>
+                <Input
+                  id="code"
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="Enter your code"
+                  maxLength={8}
+                  required
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Verifying..." : "Verify Code"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 };

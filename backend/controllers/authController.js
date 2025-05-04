@@ -19,11 +19,20 @@ const sendVerificationCode = async (user) => {
   await resend.emails.send({
     from: "onboarding@resend.dev",
     to: user.email,
-    subject: "Your LibHunt AI verification code",
+    subject: "Your LibHunt AI Verification Code",
     html: `
-      <p>Hello ${user.name || "there"},</p>
-      <p>Your verification code is: <strong style="font-size: 18px;">${code}</strong></p>
-      <p>This code is valid for <strong>30 minutes</strong>.</p>
+      <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8f8f8;">
+        <h2 style="color: #222">Hello ${user.name || "there"},</h2>
+        <p style="font-size: 15px;">Use the following verification code to proceed with your LibHunt AI account:</p>
+        <div style="background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #ccc; text-align: center; margin: 20px 0;">
+          <strong style="font-size: 24px; letter-spacing: 3px;">${code}</strong>
+        </div>
+        <p>This code is valid for <strong>30 minutes</strong>.</p>
+        <p style="margin-top: 30px; font-size: 13px; color: #666;">
+          If you didn’t request this code, you can safely ignore this email. For support, contact us at support@libhunt.ai.
+        </p>
+        <p style="margin-top: 20px; font-size: 13px;">– The LibHunt AI Team</p>
+      </div>
     `,
   });
 };
@@ -205,9 +214,18 @@ exports.verifyCode = async (req, res) => {
   if (user.verificationCode !== code) {
     return res.status(401).json({ message: "Incorrect code" });
   }
+
   user.verificationCode = null;
   user.codeExpiresAt = null;
   await user.save();
+
+  const origin = req.query.origin;
+
+  if (origin === "forgot") {
+    const token = jwt.sign({ id: user._id }, process.env.RESET_TOKEN_SECRET, { expiresIn: "30m" });
+    return res.status(200).json({ resetToken: token });
+  }
+
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "2d" });
   return res.status(200).json({ token });
 };
