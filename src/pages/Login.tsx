@@ -108,27 +108,38 @@ const Login = () => {
 
   const handleForgotPassword = async () => {
     if (!forgotEmail) {
-      toast({ title: "Email Required", description: "Please enter your email to receive a reset link.", variant: "destructive" });
+      toast({
+        title: "Email Required",
+        description: "Please enter your email to receive a verification code.",
+        variant: "destructive",
+      });
       return;
     }
-
+  
     try {
       await axios.post(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/forgot-password`, {
         email: forgotEmail.toLowerCase(),
       });
-
-      toast({ title: "Reset Link Sent", description: "Check your inbox. This link is valid for 30 minutes." });
-      setForgotEmail("");
-      setShowForgotForm(false);
+  
+      toast({
+        title: "Verification Code Sent",
+        description: "Check your inbox for the 8-digit code. It is valid for 30 minutes.",
+      });
+  
+      navigate(`/verify-code?email=${forgotEmail.toLowerCase()}`);
     } catch (err: any) {
       const status = err?.response?.status;
       toast({
-        title: "Reset Failed",
-        description: status === 404 ? "This email is not registered. Please sign up or try again." : "Something went wrong. Please try again.",
+        title: "Request Failed",
+        description:
+          status === 404
+            ? "This email is not registered. Please sign up or try again."
+            : "Something went wrong. Please try again.",
         variant: "destructive",
       });
     }
   };
+  
 
   const handleGithubLogin = () => {
     const githubRedirectUrl = `${import.meta.env.VITE_BACKEND_URL}/api/auth/github/callback`;

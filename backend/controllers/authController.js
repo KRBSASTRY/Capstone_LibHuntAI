@@ -86,30 +86,20 @@ exports.login = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: "Email is required" });
+
   try {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) return res.status(404).json({ message: "Email not found" });
-    if (!process.env.RESET_TOKEN_SECRET) {
-      return res.status(500).json({ message: "Server misconfiguration" });
-    }
-    const token = jwt.sign({ id: user._id }, process.env.RESET_TOKEN_SECRET, { expiresIn: "30m" });
-    const resetLink = `${process.env.FRONTEND_PROD_URL}/reset-password?token=${token}`;
-    await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: user.email,
-      subject: "Reset your LibHunt AI password",
-      html: `
-        <p>Hello ${user.name || "there"},</p>
-        <p>Click the link below to reset your password. This link is valid for <strong>30 minutes</strong>.</p>
-        <p><a href="${resetLink}">${resetLink}</a></p>
-      `,
-    });
-    return res.status(200).json({ message: "Reset link sent successfully" });
+
+    await sendVerificationCode(user); 
+
+    return res.status(200).json({ message: "Verification code sent to your email." });
   } catch (err) {
     console.error("🔥 Forgot Password Error:", err.message);
-    return res.status(500).json({ message: "Failed to send reset link" });
+    return res.status(500).json({ message: "Failed to send verification code" });
   }
 };
+
 
 exports.resetPassword = async (req, res) => {
   const { token, password } = req.body;

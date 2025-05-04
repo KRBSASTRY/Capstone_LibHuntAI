@@ -19,6 +19,7 @@ import Register from './pages/Register';
 import NotFound from './pages/NotFound';
 import Settings  from './pages/Settings';
 import AuthSuccess from './pages/AuthSuccess';
+import VerifyCode from "./pages/VerifyCode";
 
 console.log("✅ ENV:", import.meta.env.VITE_REACT_APP_API_URL);
 
@@ -66,6 +67,7 @@ const AppRoutes = () => (
     <Route path="/reset-password" element={<Login />} />
     <Route path="/register" element={<Register />} />
     <Route path="/auth-success" element={<AuthSuccess />} />
+    <Route path="/verify-code" element={<VerifyCode />} />
     <Route
       path="/search"
       element={
