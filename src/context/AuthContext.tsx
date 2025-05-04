@@ -1,3 +1,5 @@
+// Fix no-useless-catch and Fast Refresh
+
 import React, {
   createContext,
   useState,
@@ -7,9 +9,6 @@ import React, {
 } from "react";
 import * as authService from "../services/authService";
 
-// --------------------
-// Types
-// --------------------
 export type User = {
   id: string;
   name: string;
@@ -19,6 +18,7 @@ export type User = {
 
 export type AuthContextType = {
   user: User;
+  setUser: (user: User | null) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -28,11 +28,9 @@ export type AuthContextType = {
   setToken: (token: string | null) => void;
 };
 
-// --------------------
-// Context Creation
-// --------------------
 export const AuthContext = createContext<AuthContextType>({
   user: null,
+  setUser: () => {},
   isAuthenticated: false,
   isLoading: true,
   login: async () => {},
@@ -42,19 +40,16 @@ export const AuthContext = createContext<AuthContextType>({
   setToken: () => {},
 });
 
-// --------------------
-// Provider Component
-// --------------------
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [token, setTokenState] = useState<string | null>(localStorage.getItem("libhunt-token"));
+  const [token, setTokenState] = useState<string | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("libhunt-user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const storedToken = localStorage.getItem("libhunt-token");
+    if (storedUser) setUser(JSON.parse(storedUser));
+    if (storedToken) setTokenState(storedToken);
     setIsLoading(false);
   }, []);
 
@@ -69,31 +64,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    try {
-      const { token, user } = await authService.login(email, password);
-      setToken(token);
-      localStorage.setItem("libhunt-user", JSON.stringify(user));
-      setUser(user);
-    } catch (err) {
-      console.error("Login failed:", err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
+    const user = await authService.login(email, password);
+    setUser(user);
+    setIsLoading(false);
   };
 
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
-    try {
-      const user = await authService.register({ name, email, password });
-      localStorage.setItem("libhunt-user", JSON.stringify(user));
-      setUser(user);
-    } catch (err) {
-      console.error("Registration failed:", err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
+    const user = await authService.register({ name, email, password });
+    setUser(user);
+    setIsLoading(false);
   };
 
   const logout = () => {
@@ -106,6 +86,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         isAuthenticated: !!user,
         isLoading,
         login,
@@ -120,13 +101,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-// --------------------
-// Hook for Components
-// --------------------
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 };

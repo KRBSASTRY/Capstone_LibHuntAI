@@ -27,7 +27,17 @@ exports.register = async (req, res) => {
       password: hashed,
     });
 
-    res.status(201).json({ message: "User registered successfully" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "2d" });
+
+res.status(201).json({
+  token,
+  user: {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    isAdmin: user.isAdmin,
+  },
+});
   } catch (err) {
     console.error("Registration error:", err.message);
     res.status(500).json({ message: "Registration failed", error: err.message });
@@ -151,18 +161,10 @@ exports.changePassword = async (req, res) => {
 exports.githubAuth = async (req, res) => {
   const { code } = req.query;
 
-  console.log("📥 Incoming GitHub OAuth callback...");
-  console.log("🔑 Code received:", code);
-
   if (!code) return res.status(400).json({ message: "GitHub code is missing" });
 
   try {
-    if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
-      console.error("❌ Missing GitHub Client ID or Secret in env");
-      return res.status(500).json({ message: "Server misconfiguration" });
-    }
-
-    console.log("🌐 Requesting GitHub token with client_id:", process.env.GITHUB_CLIENT_ID);
+    console.log("➡️ GitHub OAuth: Exchanging code for token...");
 
     const tokenRes = await axios.post(
       "https://github.com/login/oauth/access_token",
@@ -171,16 +173,12 @@ exports.githubAuth = async (req, res) => {
         client_secret: process.env.GITHUB_CLIENT_SECRET,
         code,
       },
-      {
-        headers: { Accept: "application/json" },
-      }
+      { headers: { Accept: "application/json" } }
     );
-
-    console.log("🎫 GitHub token response:", tokenRes.data);
 
     const accessToken = tokenRes.data.access_token;
     if (!accessToken) {
-      console.error("❌ GitHub did not return access_token");
+      console.error("❌ GitHub token exchange failed:", tokenRes.data);
       return res.status(500).json({ message: "GitHub token exchange failed" });
     }
 
@@ -190,25 +188,15 @@ exports.githubAuth = async (req, res) => {
 
     let { login, email, name, avatar_url } = userRes.data;
 
-    console.log("👤 GitHub User:", { login, email, name });
-
-    // Fallback to /emails endpoint
     if (!email) {
-      console.log("📩 Email not public. Fetching from /user/emails...");
       const emailRes = await axios.get("https://api.github.com/user/emails", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-
-      console.log("📩 Email response:", emailRes.data);
-
       const primaryEmail = emailRes.data.find((e) => e.primary && e.verified);
       email = primaryEmail?.email;
     }
 
-    if (!email) {
-      console.error("❌ Still no verified email found");
-      return res.status(500).json({ message: "GitHub account has no verified email" });
-    }
+    if (!email) return res.status(500).json({ message: "GitHub account has no verified email" });
 
     let user = await User.findOne({ email });
     if (!user) {
@@ -220,16 +208,17 @@ exports.githubAuth = async (req, res) => {
         githubAvatar: avatar_url,
         isGithubAuth: true,
       });
+      console.log("✅ GitHub user created:", email);
+    } else {
+      console.log("ℹ️ GitHub user already exists:", email);
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "2d",
-    });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "2d" });
 
-    console.log("✅ GitHub Auth Success → Redirecting with token");
+    const baseUrl = process.env.FRONTEND_PROD_URL;
+    console.log("🔁 Redirecting to:", `${baseUrl}/auth-success?token=${token}`);
 
-    
-    return res.redirect(`${process.env.FRONTEND_PROD_URL}/auth-success?token=${token}`);
+    return res.redirect(`${baseUrl}/auth-success?token=${token}`);
   } catch (err) {
     console.error("🔥 GitHub Auth Error:", err?.response?.data || err.message);
     return res.status(500).json({ message: "GitHub authentication failed" });
