@@ -12,6 +12,10 @@ export type User = {
   name: string;
   email: string;
   role: "user" | "admin";
+  isVerified?: boolean;
+  githubUsername?: string;
+  githubAvatar?: string;
+  isGithubAuth?: boolean;
 } | null;
 
 export type AuthContextType = {
@@ -24,7 +28,7 @@ export type AuthContextType = {
   logout: () => void;
   token: string | null;
   setToken: (token: string | null) => void;
-  setAuthData: (data: { user: User; token: string }) => void; // ✅ added
+  setAuthData: (data: { user: User; token: string }) => void;
 };
 
 export const AuthContext = createContext<AuthContextType>({
@@ -37,7 +41,7 @@ export const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   token: null,
   setToken: () => {},
-  setAuthData: () => {}, // ✅ default noop
+  setAuthData: () => {},
 });
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -48,8 +52,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const storedUser = localStorage.getItem("libhunt-user");
     const storedToken = localStorage.getItem("libhunt-token");
-    if (storedUser) setUser(JSON.parse(storedUser));
-    if (storedToken) setTokenState(storedToken);
+
+    if (storedToken) {
+      setTokenState(storedToken);
+      console.log("[AuthContext] Restored token:", storedToken);
+    }
+
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      console.log("[AuthContext] Restored user:", parsedUser);
+    }
+
     setIsLoading(false);
   }, []);
 
@@ -67,12 +81,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setToken(token);
     localStorage.setItem("libhunt-user", JSON.stringify(user));
     localStorage.setItem("libhunt-token", token);
+    console.log("[AuthContext] Auth data set");
   };
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     const user = await authService.login(email, password);
     setUser(user);
+    localStorage.setItem("libhunt-user", JSON.stringify(user));
     setIsLoading(false);
   };
 
@@ -80,6 +96,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     const user = await authService.register({ name, email, password });
     setUser(user);
+    localStorage.setItem("libhunt-user", JSON.stringify(user));
     setIsLoading(false);
   };
 
@@ -88,13 +105,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
     setToken(null);
     localStorage.removeItem("libhunt-user");
+    localStorage.removeItem("libhunt-token");
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        setUser,
+        setUser: (newUser) => {
+          setUser(newUser);
+          if (newUser) {
+            localStorage.setItem("libhunt-user", JSON.stringify(newUser));
+          } else {
+            localStorage.removeItem("libhunt-user");
+          }
+        },
         isAuthenticated: !!user,
         isLoading,
         login,
@@ -102,7 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
         token,
         setToken,
-        setAuthData, // ✅ exposed
+        setAuthData,
       }}
     >
       {children}

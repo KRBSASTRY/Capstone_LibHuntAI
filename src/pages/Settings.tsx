@@ -1,155 +1,225 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import {
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardDescription,
-} from "@/components/ui/card";
-import { Eye, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import axios from "axios";
+import { useAuth } from "@/hooks/useAuth";
 
-const Settings = () => {
+const SettingsPage = () => {
   const { toast } = useToast();
-  const [showForm, setShowForm] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { user, setUser, token } = useAuth();
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      return toast({ title: "Mismatch", description: "New passwords do not match.", variant: "destructive" });
+  const [name, setName] = useState(user?.name || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [isVerified, setIsVerified] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => JSON.parse(localStorage.getItem("darkMode")) || false);
+  const [weeklyEmails, setWeeklyEmails] = useState(() => JSON.parse(localStorage.getItem("weeklyEmails")) ?? true);
+  const [announcements, setAnnouncements] = useState(() => JSON.parse(localStorage.getItem("announcements")) ?? true);
+
+  useEffect(() => {
+    setName(user?.name || "");
+    setEmail(user?.email || "");
+    setIsVerified(user?.isVerified || false);
+  }, [user]);
+
+  useEffect(() => localStorage.setItem("darkMode", JSON.stringify(darkMode)), [darkMode]);
+  useEffect(() => localStorage.setItem("weeklyEmails", JSON.stringify(weeklyEmails)), [weeklyEmails]);
+  useEffect(() => localStorage.setItem("announcements", JSON.stringify(announcements)), [announcements]);
+
+  const handleUpdateProfile = async () => {
+    if (!token) {
+      toast({ title: "Missing Token", description: "Please log in again.", variant: "destructive" });
+      return;
     }
 
     try {
-      setLoading(true);
-      await axios.post(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/change-password`, {
-        currentPassword,
-        newPassword,
-      }, {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem("libhunt-token")}`,
+      setSaving(true);
+      console.log("[Update] Token:", token);
 
-        }
-      });
+      const res = await axios.put(
+        `${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/update-profile`,
+        { name },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      toast({ title: "Success", description: "Password changed successfully." });
-      setShowForm(false);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (err: any) {
+      setUser(res.data);
+      localStorage.setItem("libhunt-user", JSON.stringify(res.data));
+      toast({ title: "Updated", description: "Profile updated successfully." });
+    } catch (err) {
       toast({
-        title: "Failed",
-        description: err.response?.data?.message || "Something went wrong.",
+        title: "Error",
+        description: "Failed to update profile.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm("Are you sure you want to delete your account? This action is irreversible.")) return;
+    try {
+      console.log("[Delete] Token:", token);
+      await axios.delete(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/delete`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast({ title: "Deleted", description: "Your account has been deleted." });
+
+      setUser(null);
+      localStorage.removeItem("libhunt-token");
+      localStorage.removeItem("libhunt-user");
+      window.location.href = "/login";
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to delete account.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/resend-verification`,
+        { email }
+      );
+      toast({ title: "Sent", description: "Verification email resent." });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to resend verification.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      console.log("[Download] Token:", token);
+      const res = await axios.get(
+        `${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/download`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        }
+      );
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/plain" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "libhunt-user-summary.txt");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      toast({
+        title: "Error",
+        description: "Download failed",
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center py-16 px-4 sm:px-6 lg:px-8 relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-accent/5 pointer-events-none" />
-      <div className="absolute -top-20 -left-20 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
-      <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+    <div className="p-8">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Settings</h1>
+        <p className="text-muted-foreground">Manage your account preferences</p>
+      </motion.div>
 
-      <div className="w-full max-w-md z-10">
-        <Card className="glass-card border-white/10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Profile Info */}
+        <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-display">Change Password</CardTitle>
-            <CardDescription className="text-sm">Update your account password securely</CardDescription>
+            <CardTitle>Profile Info</CardTitle>
+            <CardDescription>Update your personal details</CardDescription>
           </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Name</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div>
+              <Label>Email (cannot be changed)</Label>
+              <Input value={email} disabled />
+            </div>
+            <Button onClick={handleUpdateProfile} disabled={saving}>
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </CardContent>
+        </Card>
 
+        {/* Email Verification */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Email Verification</CardTitle>
+            <CardDescription>
+              Status: {isVerified ? (
+                <span className="text-green-600">Verified</span>
+              ) : (
+                <span className="text-red-600">Not Verified</span>
+              )}
+            </CardDescription>
+          </CardHeader>
           <CardContent>
-            {!showForm ? (
-              <Button className="w-full" onClick={() => setShowForm(true)}>
-                Change Password
+            {!isVerified && (
+              <Button onClick={handleResendVerification}>
+                Resend Verification Email
               </Button>
-            ) : (
-              <form onSubmit={handlePasswordChange} className="space-y-4">
-                {/* CURRENT PASSWORD */}
-                <div className="space-y-2 relative">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input
-                    id="currentPassword"
-                    type={showPassword ? "text" : "password"}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-9 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setShowPassword(!showPassword)}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-
-                {/* NEW PASSWORD */}
-                <div className="space-y-2 relative">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input
-                    id="newPassword"
-                    type={showPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-9 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setShowPassword(!showPassword)}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-
-                {/* CONFIRM PASSWORD */}
-                <div className="space-y-2 relative">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type={showPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-9 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setShowPassword(!showPassword)}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Updating..." : "Update Password"}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setShowForm(false)}
-                  className="w-full text-muted-foreground mt-2"
-                >
-                  Cancel
-                </Button>
-              </form>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Preferences */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Preferences</CardTitle>
+            <CardDescription>Manage notification and UI settings</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Dark Mode</Label>
+              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>Weekly Product Emails</Label>
+              <Switch checked={weeklyEmails} onCheckedChange={setWeeklyEmails} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>Product Announcements</Label>
+              <Switch checked={announcements} onCheckedChange={setAnnouncements} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Download Data */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Download My Data</CardTitle>
+            <CardDescription>Export your profile and activity history</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={handleDownload}>Download JSON</Button>
+          </CardContent>
+        </Card>
+
+        {/* Danger Zone */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Danger Zone</CardTitle>
+            <CardDescription>This action cannot be undone</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="destructive" onClick={handleDeleteAccount}>
+              Delete My Account
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -157,5 +227,4 @@ const Settings = () => {
   );
 };
 
-export default Settings;
-
+export default SettingsPage;

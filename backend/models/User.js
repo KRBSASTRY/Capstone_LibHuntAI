@@ -21,7 +21,13 @@ const userSchema = new mongoose.Schema({
   githubAvatar: String,
   isGithubAuth: { type: Boolean, default: false },
   verificationCode: String,
-  codeExpiresAt: Date
+  codeExpiresAt: Date,
+  preferences: {
+    darkMode: { type: Boolean, default: false },
+    weeklyEmails: { type: Boolean, default: true },
+    announcements: { type: Boolean, default: true },
+  }
+  
 
 
 }, { timestamps: true });

@@ -31,7 +31,7 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     if (!email || !password) {
       toast({
         title: "Missing Fields",
@@ -40,7 +40,7 @@ const Login = () => {
       });
       return;
     }
-
+  
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(email)) {
       toast({
@@ -50,20 +50,19 @@ const Login = () => {
       });
       return;
     }
-
+  
     try {
       setIsLoading(true);
-      await axios.post(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/login`, {
-        email: email.toLowerCase(),
-        password,
-      });
-
+  
+      // Use login from context — it sets user and token
+      await login(email.toLowerCase(), password);
+  
       toast({
-        title: "Check your inbox",
-        description: "Enter the 8-digit code sent to your email.",
+        title: "Login successful",
+        description: "Welcome back!",
       });
-
-      navigate(`/verify-code?email=${encodeURIComponent(email.toLowerCase())}`);
+  
+      navigate("/"); // ✅ Navigate to homepage on success
     } catch (err: any) {
       const status = err?.response?.status;
       toast({
@@ -80,7 +79,9 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-
+  
+  
+  
   const handleForgotPassword = async () => {
     if (!forgotEmail) {
       toast({
