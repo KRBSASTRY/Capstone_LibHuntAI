@@ -8,7 +8,7 @@ const AuthSuccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { setAuthData } = useAuth();
+  const { setToken, setUser } = useAuth();
 
   useEffect(() => {
     const query = new URLSearchParams(location.search);
@@ -19,34 +19,32 @@ const AuthSuccess = () => {
       return;
     }
 
+    setToken(token); // Save token first
+
     axios
       .get(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
         const user = res.data;
-        if (!user?.email) throw new Error("Invalid user response");
+        setUser({
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.isAdmin ? "admin" : "user",
+        });
 
-        // ✅ Save token + user in auth context
-        localStorage.setItem("libhunt-token", token);
-        localStorage.setItem("libhunt-user", JSON.stringify(user));
-        setAuthData({ token, user });
-
-        // ✅ Redirect to dashboard or homepage
-        navigate("/dashboard");
+        // ✅ Redirect to home page instead of dashboard
+        navigate("/");
       })
       .catch((err) => {
-        console.error("❌ GitHub auth fetch error:", err.message);
-        toast({
-          title: "GitHub Login Failed",
-          description: "Something went wrong while logging in.",
-          variant: "destructive",
-        });
+        console.error("❌ AuthSuccess email fetch error:", err.message);
+        toast({ title: "GitHub Login Failed", variant: "destructive" });
         navigate("/login");
       });
   }, []);
 
-  return <p className="text-center mt-10">Logging you in with GitHub...</p>;
+  return <p className="text-center mt-10">Verifying GitHub login...</p>;
 };
 
 export default AuthSuccess;
