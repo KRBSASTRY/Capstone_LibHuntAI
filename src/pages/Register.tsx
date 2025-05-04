@@ -1,4 +1,3 @@
-// ✅ ALL YOUR IMPORTS REMAIN THE SAME
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -29,6 +28,8 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("[REGISTER] Submit triggered");
+
     if (!name || !email || !password || !confirmPassword) {
       toast({ title: "Missing Fields", description: "Please fill in all fields.", variant: "destructive" });
       return;
@@ -57,23 +58,21 @@ const Register = () => {
 
     try {
       setIsLoading(true);
+      console.log("[REGISTER] Sending data to server...");
       await registerUser({ name, email: email.toLowerCase(), password });
 
-      toast({
-        title: "Verification Email Sent",
-        description: "Please check your inbox and enter the 8-digit code to activate your account.",
-      });
-
-      navigate(`/verify-code?email=${email.toLowerCase()}`);
+      toast({ title: "Registration successful", description: "You can now log in to your account." });
+      navigate("/login");
     } catch (err: any) {
+      console.error("[REGISTER] Failed:", err?.response?.data || err.message);
       toast({
         title: "Registration failed",
-        description:
-          err.response?.status === 409
-            ? "This email already exists. Please use a different email address."
-            : "Something went wrong. Please try again.",
+        description: err.response?.status === 409 ? "This email already exists. Please use a different email address." : "Something went wrong. Please try again.",
         variant: "destructive",
       });
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
     } finally {
       setIsLoading(false);
     }
@@ -84,10 +83,14 @@ const Register = () => {
     const githubURL = `https://github.com/login/oauth/authorize?client_id=${import.meta.env.VITE_GITHUB_CLIENT_ID}&redirect_uri=${redirectUri}&scope=user:email`;
     window.location.href = githubURL;
   };
+  
 
   return (
     <div className="flex min-h-screen items-center justify-center py-16 px-4 sm:px-6 lg:px-8 relative">
-      {/* Same styling */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-accent/5 pointer-events-none"></div>
+      <div className="absolute -top-20 -left-20 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
+      <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-accent/5 rounded-full blur-3xl"></div>
+
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md z-10">
         <div className="flex justify-center mb-8">
           <Link to="/" className="flex items-center gap-2">
@@ -119,8 +122,49 @@ const Register = () => {
 
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
-                {/* Name, Email, Password, Confirm Password, Checkbox inputs (unchanged) */}
-                {/* ...all your existing form fields here... */}
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <div className="relative">
+                    <Input id="name" placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} required />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                      <User size={18} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" placeholder="name@example.com" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <button type="button" className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}>
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Password must be at least 8 characters</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <div className="relative">
+                    <Input id="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                    <button type="button" className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setShowConfirmPassword(!showConfirmPassword)} tabIndex={-1}>
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2 pt-2">
+                  <Checkbox id="terms" checked={acceptTerms} onCheckedChange={(checked) => setAcceptTerms(checked as boolean)} />
+                  <Label htmlFor="terms" className="text-sm leading-none pt-1">
+                    I agree to the <Link to="/terms" className="text-accent hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-accent hover:underline">Privacy Policy</Link>
+                  </Label>
+                </div>
+
                 <Button type="submit" className="w-full mt-2" disabled={isLoading || !acceptTerms}>
                   {isLoading ? (
                     <span className="flex items-center">
