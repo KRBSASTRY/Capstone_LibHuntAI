@@ -1,13 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const { login, register } = require("../controllers/authController");
-const { forgotPassword } = require("../controllers/authController");
-const { resetPassword } = require("../controllers/authController"); 
-const { changePassword } = require("../controllers/authController");
+const {
+  login,
+  register,
+  forgotPassword,
+  resetPassword,
+  changePassword,
+  githubAuth,
+  getMe,
+  verifyCode,
+} = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware.js");
-const { githubAuth } = require("../controllers/authController");
-const { getMe } = require("../controllers/authController");
-const { verifyCode } = require("../controllers/authController");
 
 router.post("/register", register);
 router.post("/login", login);
@@ -17,7 +20,5 @@ router.post("/change-password", authMiddleware, changePassword);
 router.get("/github/callback", githubAuth);
 router.get("/me", authMiddleware, getMe);
 router.post("/verify-code", verifyCode);
-
-
 
 module.exports = router;

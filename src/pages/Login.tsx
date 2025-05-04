@@ -120,7 +120,7 @@ const Login = () => {
     const githubURL = `https://github.com/login/oauth/authorize?client_id=${import.meta.env.VITE_GITHUB_CLIENT_ID}&redirect_uri=${githubRedirectUrl}&scope=user:email`;
     window.location.href = githubURL;
   };
-
+  
   return (
     <div className="flex min-h-screen items-center justify-center py-16 px-4 sm:px-6 lg:px-8 relative">
       <motion.div

@@ -26,7 +26,7 @@ const VerifyCode = () => {
 
   const query = new URLSearchParams(location.search);
   const email = query.get("email");
-  const origin = query.get("origin"); // either 'forgot' or undefined
+  const origin = query.get("origin");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,13 +47,11 @@ const VerifyCode = () => {
         origin,
       });
 
-      // ✅ FOR FORGOT FLOW: navigate to reset-password
       if (origin === "forgot" && res.data.resetToken) {
         navigate(`/reset-password?token=${res.data.resetToken}`);
         return;
       }
 
-      // ✅ ELSE: login as usual
       const token = res.data.token;
       localStorage.setItem("libhunt-token", token);
       setToken(token);
@@ -109,7 +107,6 @@ const VerifyCode = () => {
                   required
                 />
               </div>
-
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Verifying..." : "Verify Code"}
               </Button>

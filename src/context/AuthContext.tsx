@@ -1,5 +1,3 @@
-// Fix no-useless-catch and Fast Refresh
-
 import React, {
   createContext,
   useState,
@@ -26,6 +24,7 @@ export type AuthContextType = {
   logout: () => void;
   token: string | null;
   setToken: (token: string | null) => void;
+  setAuthData: (data: { user: User; token: string }) => void; // ✅ added
 };
 
 export const AuthContext = createContext<AuthContextType>({
@@ -38,6 +37,7 @@ export const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   token: null,
   setToken: () => {},
+  setAuthData: () => {}, // ✅ default noop
 });
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -62,6 +62,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setTokenState(token);
   };
 
+  const setAuthData = ({ user, token }: { user: User; token: string }) => {
+    setUser(user);
+    setToken(token);
+    localStorage.setItem("libhunt-user", JSON.stringify(user));
+    localStorage.setItem("libhunt-token", token);
+  };
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     const user = await authService.login(email, password);
@@ -80,6 +87,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     authService.logout();
     setUser(null);
     setToken(null);
+    localStorage.removeItem("libhunt-user");
   };
 
   return (
@@ -94,6 +102,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
         token,
         setToken,
+        setAuthData, // ✅ exposed
       }}
     >
       {children}
