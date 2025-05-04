@@ -1,13 +1,11 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { getUserFromAPI } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
+import axios from "axios";
 
 const AuthSuccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setToken, setUser } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -19,21 +17,26 @@ const AuthSuccess = () => {
       return;
     }
 
-    localStorage.setItem("libhunt-token", token);
-    setToken(token);
-
-    getUserFromAPI(token)
-      .then((user) => {
-        setUser(user);
-        navigate("/");
+    axios
+      .get(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
-      .catch(() => {
+      .then((res) => {
+        const userEmail = res.data?.email;
+        if (!userEmail) {
+          throw new Error("No email in user response");
+        }
+
+        navigate(`/verify-code?email=${encodeURIComponent(userEmail)}`);
+      })
+      .catch((err) => {
+        console.error("❌ AuthSuccess email fetch error:", err.message);
         toast({ title: "GitHub Login Failed", variant: "destructive" });
         navigate("/login");
       });
   }, []);
 
-  return <p className="text-center mt-10">Signing you in...</p>;
+  return <p className="text-center mt-10">Verifying GitHub login...</p>;
 };
 
 export default AuthSuccess;

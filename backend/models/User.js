@@ -15,11 +15,14 @@ const userSchema = new mongoose.Schema({
     required: function () {
       return !this.isGithubAuth;
     },
-  },  
+  },
   isAdmin: { type: Boolean, default: false },
   githubUsername: String,
   githubAvatar: String,
   isGithubAuth: { type: Boolean, default: false },
+  verificationCode: String,
+  codeExpiresAt: Date
+
 
 }, { timestamps: true });
 

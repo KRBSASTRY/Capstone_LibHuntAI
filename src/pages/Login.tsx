@@ -38,7 +38,6 @@ const Login = () => {
     e.preventDefault();
 
     if (resetToken) {
-      console.log("🔁 Resetting password with token");
       if (!newPassword || !confirmPassword) {
         toast({ title: "Missing Fields", description: "Please enter and confirm your new password.", variant: "destructive" });
         return;
@@ -51,7 +50,6 @@ const Login = () => {
 
       try {
         setIsLoading(true);
-        console.log("📡 Sending password reset request...");
         await axios.post(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/reset-password`, {
           token: resetToken,
           password: newPassword,
@@ -60,7 +58,6 @@ const Login = () => {
         toast({ title: "Password Updated", description: "You can now log in with your new password." });
         navigate("/login");
       } catch (err: any) {
-        console.error("❌ Reset failed:", err);
         toast({
           title: "Reset Failed",
           description: err.response?.data?.message || "Something went wrong.",
@@ -85,22 +82,23 @@ const Login = () => {
 
     try {
       setIsLoading(true);
-      console.log("🔐 Attempting login with:", email);
-      await login(email.toLowerCase(), password);
+      await axios.post(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/login`, {
+        email: email.toLowerCase(),
+        password,
+      });
 
-      toast({ title: "Login successful", description: "Welcome back to LibHunt AI!" });
-      navigate("/");
+      toast({ title: "Check your inbox", description: "Enter the 8-digit code sent to your email." });
+      navigate(`/verify-code?email=${encodeURIComponent(email.toLowerCase())}`);
     } catch (err: any) {
       const status = err?.response?.status;
-      console.error("❌ Login failed:", status);
       toast({
         title: "Login failed",
         description:
           status === 404
             ? "Email not registered. Please sign up first."
             : status === 401
-            ? "Incorrect password. Please try again."
-            : "Unexpected error. Please try again later.",
+              ? "Incorrect password. Please try again."
+              : "Unexpected error. Please try again later.",
         variant: "destructive",
       });
     } finally {
@@ -115,7 +113,6 @@ const Login = () => {
     }
 
     try {
-      console.log("📧 Sending forgot password email to:", forgotEmail);
       await axios.post(`${import.meta.env.VITE_REACT_APP_API_URL}/api/auth/forgot-password`, {
         email: forgotEmail.toLowerCase(),
       });
@@ -125,7 +122,6 @@ const Login = () => {
       setShowForgotForm(false);
     } catch (err: any) {
       const status = err?.response?.status;
-      console.error("❌ Forgot password failed:", status);
       toast({
         title: "Reset Failed",
         description: status === 404 ? "This email is not registered. Please sign up or try again." : "Something went wrong. Please try again.",
@@ -139,11 +135,9 @@ const Login = () => {
     const githubURL = `https://github.com/login/oauth/authorize?client_id=${import.meta.env.VITE_GITHUB_CLIENT_ID}&redirect_uri=${githubRedirectUrl}&scope=user:email`;
     window.location.href = githubURL;
   };
-  
+
   return (
     <div className="flex min-h-screen items-center justify-center py-16 px-4 sm:px-6 lg:px-8 relative">
-      {/* Gradient and Blur UI elements omitted for brevity */}
-
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md z-10">
         <Card className="glass-card border-white/10">
           <CardHeader>
@@ -275,9 +269,3 @@ const Login = () => {
 };
 
 export default Login;
-
-
-
-
-
-

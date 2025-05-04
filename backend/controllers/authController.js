@@ -6,57 +6,68 @@ const User = require("../models/User");
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// REGISTER
+const generateCode = () => {
+  return Math.floor(10000000 + Math.random() * 90000000).toString();
+};
+
+const sendVerificationCode = async (user) => {
+  const code = generateCode();
+  user.verificationCode = code;
+  user.codeExpiresAt = Date.now() + 30 * 60 * 1000;
+  await user.save();
+
+  await resend.emails.send({
+    from: "onboarding@resend.dev",
+    to: user.email,
+    subject: "Your LibHunt AI verification code",
+    html: `
+      <p>Hello ${user.name || "there"},</p>
+      <p>Your verification code is: <strong style="font-size: 18px;">${code}</strong></p>
+      <p>This code is valid for <strong>30 minutes</strong>.</p>
+    `,
+  });
+};
+
 exports.register = async (req, res) => {
   const { name, email, password } = req.body;
-
   if (!name || !email || !password) {
     return res.status(400).json({ message: "All fields are required." });
   }
-
   try {
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
       return res.status(409).json({ message: "User already exists" });
     }
-
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       password: hashed,
     });
-
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "2d" });
-
-res.status(201).json({
-  token,
-  user: {
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    isAdmin: user.isAdmin,
-  },
-});
+    res.status(201).json({
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+      },
+    });
   } catch (err) {
     console.error("Registration error:", err.message);
     res.status(500).json({ message: "Registration failed", error: err.message });
   }
 };
 
-// LOGIN
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-
   try {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) return res.status(404).json({ message: "User not found" });
-
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ message: "Invalid credentials" });
-
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "2d" });
-
     res.status(200).json({
       token,
       user: {
@@ -72,25 +83,17 @@ exports.login = async (req, res) => {
   }
 };
 
-// FORGOT PASSWORD
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
-
   if (!email) return res.status(400).json({ message: "Email is required" });
-
   try {
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) return res.status(404).json({ message: "Email not found" });
-
     if (!process.env.RESET_TOKEN_SECRET) {
-      console.error("❌ RESET_TOKEN_SECRET is not defined");
       return res.status(500).json({ message: "Server misconfiguration" });
     }
-
     const token = jwt.sign({ id: user._id }, process.env.RESET_TOKEN_SECRET, { expiresIn: "30m" });
-
     const resetLink = `${process.env.FRONTEND_PROD_URL}/reset-password?token=${token}`;
-
     await resend.emails.send({
       from: "onboarding@resend.dev",
       to: user.email,
@@ -99,38 +102,27 @@ exports.forgotPassword = async (req, res) => {
         <p>Hello ${user.name || "there"},</p>
         <p>Click the link below to reset your password. This link is valid for <strong>30 minutes</strong>.</p>
         <p><a href="${resetLink}">${resetLink}</a></p>
-        <p>If you didn’t request this, you can ignore it.</p>
       `,
     });
-
     return res.status(200).json({ message: "Reset link sent successfully" });
   } catch (err) {
-    console.error("🔥 Forgot Password Error:", {
-      msg: err.message,
-      raw: err?.response?.data,
-      tokenSecret: process.env.RESET_TOKEN_SECRET ? "✔️ defined" : "❌ undefined",
-    });    
+    console.error("🔥 Forgot Password Error:", err.message);
     return res.status(500).json({ message: "Failed to send reset link" });
   }
 };
 
-// RESET PASSWORD
 exports.resetPassword = async (req, res) => {
   const { token, password } = req.body;
-
   if (!token || !password) {
     return res.status(400).json({ message: "Token and password are required." });
   }
-
   try {
     const decoded = jwt.verify(token, process.env.RESET_TOKEN_SECRET);
     const user = await User.findById(decoded.id);
     if (!user) return res.status(404).json({ message: "User not found" });
-
     const hashed = await bcrypt.hash(password, 10);
     user.password = hashed;
     await user.save();
-
     return res.status(200).json({ message: "Password reset successful." });
   } catch (err) {
     console.error("Reset Password Error:", err.message);
@@ -138,19 +130,15 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// CHANGE PASSWORD
 exports.changePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   const userId = req.user.id;
-
   try {
     const user = await User.findById(userId);
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) return res.status(401).json({ message: "Current password is incorrect" });
-
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
-
     res.status(200).json({ message: "Password updated successfully" });
   } catch (err) {
     console.error("Change Password Error:", err.message);
@@ -160,12 +148,8 @@ exports.changePassword = async (req, res) => {
 
 exports.githubAuth = async (req, res) => {
   const { code } = req.query;
-
   if (!code) return res.status(400).json({ message: "GitHub code is missing" });
-
   try {
-    console.log("➡️ GitHub OAuth: Exchanging code for token...");
-
     const tokenRes = await axios.post(
       "https://github.com/login/oauth/access_token",
       {
@@ -175,19 +159,12 @@ exports.githubAuth = async (req, res) => {
       },
       { headers: { Accept: "application/json" } }
     );
-
     const accessToken = tokenRes.data.access_token;
-    if (!accessToken) {
-      console.error("❌ GitHub token exchange failed:", tokenRes.data);
-      return res.status(500).json({ message: "GitHub token exchange failed" });
-    }
-
+    if (!accessToken) return res.status(500).json({ message: "GitHub token exchange failed" });
     const userRes = await axios.get("https://api.github.com/user", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-
     let { login, email, name, avatar_url } = userRes.data;
-
     if (!email) {
       const emailRes = await axios.get("https://api.github.com/user/emails", {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -195,9 +172,7 @@ exports.githubAuth = async (req, res) => {
       const primaryEmail = emailRes.data.find((e) => e.primary && e.verified);
       email = primaryEmail?.email;
     }
-
     if (!email) return res.status(500).json({ message: "GitHub account has no verified email" });
-
     let user = await User.findOne({ email });
     if (!user) {
       user = await User.create({
@@ -208,24 +183,14 @@ exports.githubAuth = async (req, res) => {
         githubAvatar: avatar_url,
         isGithubAuth: true,
       });
-      console.log("✅ GitHub user created:", email);
-    } else {
-      console.log("ℹ️ GitHub user already exists:", email);
     }
-
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "2d" });
-
-    const baseUrl = process.env.FRONTEND_PROD_URL;
-    console.log("🔁 Redirecting to:", `${baseUrl}/auth-success?token=${token}`);
-
-    return res.redirect(`${baseUrl}/auth-success?token=${token}`);
+    await sendVerificationCode(user);
+    return res.redirect(`${process.env.FRONTEND_PROD_URL}/verify-code?email=${user.email}`);
   } catch (err) {
-    console.error("🔥 GitHub Auth Error:", err?.response?.data || err.message);
+    console.error("🔥 GitHub Auth Error:", err.message);
     return res.status(500).json({ message: "GitHub authentication failed" });
   }
 };
-
-
 
 exports.getMe = async (req, res) => {
   try {
@@ -238,3 +203,21 @@ exports.getMe = async (req, res) => {
   }
 };
 
+exports.verifyCode = async (req, res) => {
+  const { email, code } = req.body;
+  const user = await User.findOne({ email });
+  if (!user || !user.verificationCode) {
+    return res.status(400).json({ message: "Invalid or expired verification." });
+  }
+  if (user.codeExpiresAt < Date.now()) {
+    return res.status(410).json({ message: "Code expired" });
+  }
+  if (user.verificationCode !== code) {
+    return res.status(401).json({ message: "Incorrect code" });
+  }
+  user.verificationCode = null;
+  user.codeExpiresAt = null;
+  await user.save();
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "2d" });
+  return res.status(200).json({ token });
+};
