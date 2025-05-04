@@ -87,16 +87,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     const user = await authService.login(email, password);
+    const token = authService.getToken(); // 🔑 Ensure token is stored in context
     setUser(user);
-    localStorage.setItem("libhunt-user", JSON.stringify(user));
+    setToken(token);
     setIsLoading(false);
   };
 
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     const user = await authService.register({ name, email, password });
+    const token = authService.getToken(); // 🔑 Sync token after register
     setUser(user);
-    localStorage.setItem("libhunt-user", JSON.stringify(user));
+    setToken(token);
     setIsLoading(false);
   };
 
