@@ -9,14 +9,13 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const generateCode = () => {
   return Math.floor(10000000 + Math.random() * 90000000).toString();
 };
-
 const sendVerificationCode = async (user) => {
   const code = generateCode();
   user.verificationCode = code;
   user.codeExpiresAt = Date.now() + 30 * 60 * 1000;
   await user.save();
 
-  await resend.emails.send({
+  const emailResponse = await resend.emails.send({
     from: "onboarding@resend.dev",
     to: user.email,
     subject: "Your LibHunt AI Verification Code",
@@ -35,11 +34,13 @@ const sendVerificationCode = async (user) => {
       </div>
     `,
   });
+
   if (!emailResponse?.id) {
     console.error("❌ Email not sent:", emailResponse);
     throw new Error("Email failed to send");
   }
 };
+
 
 exports.register = async (req, res) => {
   const { name, email, password } = req.body;
