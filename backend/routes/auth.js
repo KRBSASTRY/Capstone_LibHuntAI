@@ -6,6 +6,7 @@ const { resetPassword } = require("../controllers/authController");
 const { changePassword } = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware.js");
 const { githubAuth } = require("../controllers/authController");
+const { getMe } = require("../controllers/authController");
 
 
 router.post("/register", register);
@@ -14,6 +15,7 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.post("/change-password", authMiddleware, changePassword);
 router.get("/github/callback", githubAuth);
+router.get("/me", authMiddleware, getMe);
 
 
 
