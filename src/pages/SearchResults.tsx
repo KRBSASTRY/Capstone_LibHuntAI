@@ -30,6 +30,9 @@ import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { fetchLibraries } from "@/services/libraryService";
+import Fuse from "fuse.js";
+
+
 
 // // Mock data
 // const mockLibraries = [
@@ -462,12 +465,13 @@ const SearchResults = () => {
 
     // Apply search query filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(lib =>
-        lib.name.toLowerCase().includes(query) ||
-        lib.description.toLowerCase().includes(query) ||
-        lib.tags?.some(tag => tag.toLowerCase().includes(query))
-      );
+      const fuse = new Fuse(libraries, {
+        keys: ["name", "description", "tags"],
+        threshold: 0.3,
+      });
+  
+      const result = fuse.search(searchQuery);
+      filtered = result.map(r => r.item);
     }
 
     // Apply category filter

@@ -5,6 +5,10 @@ import { motion } from "framer-motion";
 import { Search, ChevronRight, Github, Sparkles, AreaChart, Zap, Code, Database, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Fuse from "fuse.js";
+import { useAuth } from "@/context/AuthContext";
+
+
 
 const HeroSection = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -268,13 +272,21 @@ const TestimonialsSection = () => {
 };
 
 const CTASection = () => {
+  const { user } = useAuth();
+  const [showCTA, setShowCTA] = useState(user ? false : true);
+
+  useEffect(() => {
+    setShowCTA(!user); 
+  }, [user]);
+
+  if (!showCTA) return null;
+
   return (
     <section className="py-20 px-6">
       <div className="max-w-5xl mx-auto glass-card rounded-2xl p-10 overflow-hidden relative">
-        {/* Background gradients */}
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-accent/5 rounded-full blur-3xl"></div>
-        
+
         <div className="text-center relative z-10">
           <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">
             Ready to find your perfect libraries?
@@ -300,6 +312,8 @@ const CTASection = () => {
     </section>
   );
 };
+
+
 
 // Utility icons for categories section
 const Server = (props: any) => (

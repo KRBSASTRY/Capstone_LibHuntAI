@@ -49,6 +49,7 @@
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.3.0",
     "framer-motion": "^12.7.3",
+    "fuse.js": "^7.1.0",
     "helmet": "^8.1.0",
     "html2pdf.js": "^0.10.3",
     "input-otp": "^1.2.4",
@@ -70,6 +71,7 @@
     "tailwindcss": "^4.1.4",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.3",
+    "winston": "^3.17.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

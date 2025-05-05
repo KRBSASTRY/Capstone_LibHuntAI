@@ -1,35 +1,44 @@
+const Fuse = require("fuse.js");
 const Library = require("../models/Library");
 
-// 📄 Get Paginated Libraries (for /api/libraries?page=1&limit=20)
+// 📄 Get Paginated Libraries (for /api/libraries?page=1&limit=20&q=react)
 exports.getPaginatedLibraries = async (req, res) => {
   console.log("🔵 Inside getPaginatedLibraries controller");
 
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
+    const searchQuery = req.query.q || "";
     const skip = (page - 1) * limit;
 
-    console.log(`🔵 Pagination Params — page: ${page}, limit: ${limit}, skip: ${skip}`);
+    // Fetch all that could potentially match (Fuse will do in-memory filtering)
+    const baseQuery = {}; // no filter here, let Fuse do it
+    const allLibraries = await Library.find(baseQuery).sort({ weeklyDownloads: -1 });
 
-    const libraries = await Library.find()
-      .skip(skip)
-      .limit(limit)
-      .sort({ weeklyDownloads: -1 });
+    let matchedLibraries = allLibraries;
 
-    console.log(`🟢 Libraries fetched: ${libraries.length}`);
+    // 🔍 Apply Fuse fuzzy search if query is present
+    if (searchQuery) {
+      const fuse = new Fuse(allLibraries, {
+        keys: ["name", "description", "tags"],
+        threshold: 0.3,
+      });
 
-    const totalLibraries = await Library.countDocuments();
-    const totalPages = Math.ceil(totalLibraries / limit);
+      const results = fuse.search(searchQuery);
+      matchedLibraries = results.map(r => r.item);
+    }
 
-    console.log(`🟢 Total libraries in DB: ${totalLibraries}, Total pages: ${totalPages}`);
+    // Apply pagination AFTER fuzzy match
+    const paginated = matchedLibraries.slice(skip, skip + limit);
+    const totalPages = Math.ceil(matchedLibraries.length / limit);
 
     res.status(200).json({
-      libraries,
+      libraries: paginated,
       totalPages,
     });
   } catch (error) {
-    console.error('🔴 Error fetching paginated libraries:', error.message);
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    console.error("🔴 Error fetching paginated libraries:", error.message);
+    res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 

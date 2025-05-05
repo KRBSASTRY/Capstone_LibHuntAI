@@ -124,7 +124,7 @@ const Register = () => {
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="name">Username</Label>
                   <div className="relative">
                     <Input id="name" placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} required />
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">

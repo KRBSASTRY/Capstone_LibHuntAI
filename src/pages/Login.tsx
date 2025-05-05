@@ -16,6 +16,7 @@ import { Eye, EyeOff, ArrowRight, Github } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import axios from "axios";
+import { Separator } from "@radix-ui/react-dropdown-menu";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -31,7 +32,7 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     if (!email || !password) {
       toast({
         title: "Missing Fields",
@@ -40,7 +41,7 @@ const Login = () => {
       });
       return;
     }
-  
+
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(email)) {
       toast({
@@ -50,18 +51,18 @@ const Login = () => {
       });
       return;
     }
-  
+
     try {
       setIsLoading(true);
-  
+
       // Use login from context — it sets user and token
       await login(email.toLowerCase(), password);
-  
+
       toast({
         title: "Login successful",
         description: "Welcome back!",
       });
-  
+
       navigate("/"); // ✅ Navigate to homepage on success
     } catch (err: any) {
       const status = err?.response?.status;
@@ -71,17 +72,17 @@ const Login = () => {
           status === 404
             ? "Email not registered. Please sign up first."
             : status === 401
-            ? "Incorrect password. Please try again."
-            : "Unexpected error. Please try again later.",
+              ? "Incorrect password. Please try again."
+              : "Unexpected error. Please try again later.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
-  
-  
+
+
+
   const handleForgotPassword = async () => {
     if (!forgotEmail) {
       toast({
@@ -121,7 +122,7 @@ const Login = () => {
     const githubURL = `https://github.com/login/oauth/authorize?client_id=${import.meta.env.VITE_GITHUB_CLIENT_ID}&redirect_uri=${githubRedirectUrl}&scope=user:email`;
     window.location.href = githubURL;
   };
-  
+
   return (
     <div className="flex min-h-screen items-center justify-center py-16 px-4 sm:px-6 lg:px-8 relative">
       <motion.div
@@ -130,7 +131,18 @@ const Login = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md z-10"
       >
+
+        <div className="flex justify-center mb-8">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-accent to-cyan-300 overflow-hidden">
+              <span className="text-black font-bold text-xl">L</span>
+            </div>
+            <span className="font-display font-bold text-xl">LibHunt AI</span>
+          </Link>
+        </div>
+
         <Card className="glass-card border-white/10">
+
           <CardHeader>
             <CardTitle className="text-2xl font-display">Sign in to your account</CardTitle>
             <CardDescription>
@@ -146,6 +158,11 @@ const Login = () => {
               <Github size={18} />
               <span>Continue with GitHub</span>
             </Button>
+            <div className="flex items-center my-5">
+              <Separator className="flex-1" />
+              <span className="px-3 text-xs text-muted-foreground">OR CONTINUE WITH EMAIL</span>
+              <Separator className="flex-1" />
+            </div>
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div className="space-y-2">

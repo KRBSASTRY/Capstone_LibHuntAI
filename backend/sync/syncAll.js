@@ -9,7 +9,7 @@ async function runSync(command) {
   } catch (error) {
     console.error(`❌ Error running: ${command}`);
     console.error(error.message);
-    process.exit(1); // Exit if any step fails
+    process.exit(1);
   }
 }
 
@@ -19,9 +19,9 @@ async function runAllSyncs() {
   console.log('--------------------------------------------------');
 
   // Core metadata syncs
-  await runSync('sync/syncNpmLibraries.js');
-  await runSync('sync/syncGithubData.js');
-  await runSync('sync/syncLibrariesioData.js');
+  await runSync('sync/syncNpm.js');
+  await runSync('sync/syncGithub.js');
+  await runSync('sync/syncLibrariesio.js');
 
   // Core bundle size
   await runSync('sync/syncBundlephobia.js');
@@ -36,7 +36,7 @@ async function runAllSyncs() {
   await runSync('sync/syncAlternatives.js');
 
   // Additional enhancements
-  await runSync('sync/syncFixLibrariesIoMetadata.js'); // Fix missing deps/platforms
+  await runSync('sync/syncFixLibrariesIoMetadata.js');  // Fix missing deps/platforms
   await runSync('sync/syncFetchLogos.js');              // Fetch GitHub OpenGraph logos
   await runSync('sync/syncDetectTypeSupport.js');       // Detect TypeScript support
   await runSync('sync/syncPerformance.js');             // Fetch page performance
